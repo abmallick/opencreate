@@ -1,0 +1,43 @@
+[
+  {
+    "id": "scr-01",
+    "valid": false,
+    "errors": [
+      "Invalid segment duration: [00:04-00:04] (0s)"
+    ],
+    "segments": [
+      {
+        "raw": "[00:00-00:01]",
+        "start": 0,
+        "end": 1,
+        "duration": 1
+      },
+      {
+        "raw": "[00:01-00:02]",
+        "start": 1,
+        "end": 2,
+        "duration": 1
+      },
+      {
+        "raw": "[00:02-00:03]",
+        "start": 2,
+        "end": 3,
+        "duration": 1
+      },
+      {
+        "raw": "[00:03-00:04]",
+        "start": 3,
+        "end": 4,
+        "duration": 1
+      },
+      {
+        "raw": "[00:04-00:04]",
+        "start": 4,
+        "end": 4,
+        "duration": 0
+      }
+    ],
+    "totalDuration": 4,
+    "script": "[00:00-00:01] Close-up of a dew-kissed bottle on a table (still shot, slowly panning)  \n[00:01-00:02] Hands grabbing the bottle, condensation glistening in sunlight (medium shot, rapid focus on hands)  \n[00:02-00:03] Pouring the beverage into a glass, ice crashing (overhead shot, slow-motion effect)  \n[00:03-00:04] A refreshing sip taken, smiling faces in the background (wide shot, soft focus on guests enjoying)  \n[00:04-00:04] Logo animation and tagline appears (center frame, elegant fade-in)"
+  }
+]

@@ -1,0 +1,43 @@
+[
+  {
+    "id": "scr-01",
+    "valid": false,
+    "errors": [
+      "Invalid segment duration: [00:04-00:04] (0s)"
+    ],
+    "segments": [
+      {
+        "raw": "[00:00-00:01]",
+        "start": 0,
+        "end": 1,
+        "duration": 1
+      },
+      {
+        "raw": "[00:01-00:02]",
+        "start": 1,
+        "end": 2,
+        "duration": 1
+      },
+      {
+        "raw": "[00:02-00:03]",
+        "start": 2,
+        "end": 3,
+        "duration": 1
+      },
+      {
+        "raw": "[00:03-00:04]",
+        "start": 3,
+        "end": 4,
+        "duration": 1
+      },
+      {
+        "raw": "[00:04-00:04]",
+        "start": 4,
+        "end": 4,
+        "duration": 0
+      }
+    ],
+    "totalDuration": 4,
+    "script": "[00:00-00:01] Open with a sun-drenched beach (wide shot, vibrant colors).  \n[00:01-00:02] Close-up of the beverage bottle glistening with condensation (smooth pan around).  \n[00:02-00:03] Slow-motion pour of the drink into a glass, ice clinking (dynamic shot).  \n[00:03-00:04] Group of friends laughing, raising their glasses, the bottle in the foreground (focus on joy).  \n[00:04-00:04] Fade out to brand logo with tagline (elegant transition)."
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "description": "Test cases for Campaign Studio evaluations (image only)",
+  "imageBlending": [
+    {
+      "id": "img-01",
+      "subject": "subjects/subject-bottle.png",
+      "scene": "scenes/scene-kitchen.png",
+      "prompt": "A refreshing glass bottle on a modern kitchen counter, natural daylight",
+      "description": "Bottle + Kitchen"
+    }
+  ]
+}
