@@ -503,6 +503,45 @@ app.get('/api/video/:id/content', async (req, res) => {
   }
 });
 
+app.post('/api/video/:id/remix', async (req, res) => {
+  if (!requireApiKey(req, res)) return;
+
+  const { prompt } = req.body || {};
+  if (!prompt?.trim()) {
+    res.status(400).json({ message: 'Remix prompt is required.' });
+    return;
+  }
+
+  console.log('[remix] request start', { id: req.params.id, promptLength: prompt.length });
+
+  try {
+    const response = await fetch(
+      `https://api.openai.com/v1/videos/${req.params.id}/remix`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ prompt: prompt.trim() })
+      }
+    );
+
+    const data = await response.json();
+    if (!response.ok) {
+      console.error('[remix] api error', data?.error?.message || data);
+      res.status(response.status).json({ message: data?.error?.message || 'Remix failed.' });
+      return;
+    }
+
+    console.log('[remix] response queued', { status: response.status, id: data.id, state: data.status });
+    res.json({ id: data.id, status: data.status });
+  } catch (error) {
+    console.error('[remix] request failed', error.message || error);
+    res.status(500).json({ message: error.message || 'Remix failed.' });
+  }
+});
+
 app.use((err, req, res, next) => {
   if (err) {
     const message = err.message || 'Upload failed.';

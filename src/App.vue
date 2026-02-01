@@ -279,6 +279,24 @@
                 <div class="row">
                   <button class="primary" @click="downloadVideo">Download</button>
                 </div>
+                <div class="remix-section">
+                  <label class="field">
+                    <span>Edit this video</span>
+                    <textarea
+                      v-model="remixPrompt"
+                      placeholder="Describe a single change, e.g., 'Change the lighting to sunset tones'"
+                      :disabled="remixLoading"
+                    ></textarea>
+                  </label>
+                  <button
+                    class="primary"
+                    :disabled="!canRemix"
+                    @click="remixVideo"
+                  >
+                    <span v-if="!remixLoading">Apply Edit</span>
+                    <span v-else>Remixing…</span>
+                  </button>
+                </div>
               </div>
               <div v-else class="empty">Generate an ad to preview it here.</div>
             </div>
@@ -356,6 +374,8 @@ const videoInputFile = ref(null);
 const videoInputPreview = ref('');
 const showScriptPanel = ref(false);
 const isRegenerating = ref(false);
+const remixPrompt = ref('');
+const remixLoading = ref(false);
 const imageViewport = ref(null);
 const imageZoom = ref(1);
 const imagePan = ref({ x: 0, y: 0 });
@@ -383,6 +403,9 @@ const videoCompleted = computed(() => {
   const status = (videoStatus.value || '').toLowerCase().trim();
   return status.includes('completed');
 });
+const canRemix = computed(() =>
+  videoId.value && videoCompleted.value && remixPrompt.value.trim() && !remixLoading.value
+);
 const videoStatusLabel = computed(() => {
   const status = (videoStatus.value || '').toLowerCase().trim();
   if (!status) return '';
@@ -837,6 +860,38 @@ function downloadVideo() {
   link.href = videoUrl.value;
   link.download = 'creative.mp4';
   link.click();
+}
+
+async function remixVideo() {
+  if (!videoId.value || !remixPrompt.value.trim()) return;
+
+  videoError.value = '';
+  remixLoading.value = true;
+  videoStatus.value = 'Submitting remix...';
+  videoUrl.value = '';
+
+  try {
+    const response = await fetch(`/api/video/${videoId.value}/remix`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: remixPrompt.value.trim() })
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || 'Failed to start remix.');
+    }
+
+    const data = await response.json();
+    videoId.value = data.id;
+    remixPrompt.value = '';
+    pollVideo();
+  } catch (error) {
+    videoError.value = error.message || 'Remix failed.';
+    videoStatus.value = '';
+  } finally {
+    remixLoading.value = false;
+  }
 }
 
 onBeforeUnmount(() => {
@@ -1387,6 +1442,23 @@ select:focus {
 
 .result video {
   max-height: 320px;
+}
+
+.remix-section {
+  width: 100%;
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e9ed;
+}
+
+.remix-section textarea {
+  min-height: 56px;
+}
+
+.remix-section .primary {
+  justify-self: start;
 }
 
 .image-container {
