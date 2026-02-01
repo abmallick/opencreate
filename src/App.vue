@@ -289,13 +289,9 @@
               <div class="script-meta">Review and edit before generating the ad.</div>
             </div>
             <div v-else class="video-output">
-              <div v-if="videoLoading" class="ad-center">
+              <div v-if="videoPending" class="ad-center">
                 <div class="spinner"></div>
-                <p>Rendering your ad…</p>
-              </div>
-              <div v-else-if="videoStatus && !videoCompleted" class="ad-center">
-                <div class="spinner"></div>
-                <p>{{ videoStatusLabel }}</p>
+                <p>{{ videoPendingLabel }}</p>
               </div>
               <div v-else-if="videoUrl" class="result">
                 <video controls :src="videoUrl"></video>
@@ -431,6 +427,13 @@ const videoCompleted = computed(() => {
   const status = (videoStatus.value || '').toLowerCase().trim();
   return status.includes('completed');
 });
+const videoPending = computed(
+  () =>
+    videoSubmitted.value &&
+    !videoCompleted.value &&
+    !videoUrl.value &&
+    !videoError.value
+);
 const canRemix = computed(() =>
   videoId.value && videoCompleted.value && remixPrompt.value.trim() && !remixLoading.value
 );
@@ -451,6 +454,11 @@ const videoStatusLabel = computed(() => {
     failed: 'Failed'
   };
   return labels[normalized] || 'In Progress';
+});
+const videoPendingLabel = computed(() => {
+  if (videoStatusLabel.value) return videoStatusLabel.value;
+  if (videoLoading.value) return 'Submitting…';
+  return 'Rendering your ad…';
 });
 
 const imageTransform = computed(() => ({
@@ -1527,15 +1535,6 @@ select:focus {
   color: #4a5866;
 }
 
-.spinner {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 4px solid #d7e0e6;
-  border-top-color: #f08b5b;
-  animation: spin 1s linear infinite;
-}
-
 .result {
   display: grid;
   gap: 14px;
@@ -1706,12 +1705,6 @@ select:focus {
 .script-meta {
   font-size: 12px;
   color: #6b7785;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 @media (max-width: 860px) {
