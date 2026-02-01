@@ -13,6 +13,8 @@ npm run dev:full
 - Frontend: http://localhost:5173
 - API server: http://localhost:8787
 
+Live Deployment (try it out): http://13.233.36.252:5173/
+
 ## Demo steps
 
 1. Open http://localhost:5173.
