@@ -4,6 +4,7 @@
       <p class="eyebrow">Creative Studio</p>
       <h1>Sign in to continue</h1>
       <p class="auth-subtitle">Use your OpenCreate credentials to access the studio.</p>
+      <p class="auth-subtext">The test credentials are in the Google Form.</p>
       <form class="auth-form" @submit.prevent="handleAuth">
         <label class="field">
           <span>Username</span>
@@ -987,6 +988,13 @@ onBeforeUnmount(() => {
   margin: 0 0 8px;
   color: #4a5866;
   font-size: 14px;
+  line-height: 1.6;
+}
+
+.auth-subtext {
+  margin: 0 0 4px;
+  color: #6b7785;
+  font-size: 12px;
   line-height: 1.6;
 }
 
