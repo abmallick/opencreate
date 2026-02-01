@@ -148,24 +148,34 @@
       <div class="preview">
         <div v-if="mode === 'creative'" class="preview-card">
           <div v-if="!generatedImage && !imageLoading" class="empty">Your creative appears here.</div>
-          <div v-if="imageLoading" class="loading">
+          <div v-if="imageLoading && !generatedImage" class="loading">
             <div class="spinner"></div>
             <p>Blending subject with scene…</p>
           </div>
           <div v-if="generatedImage" class="result">
-            <img :src="generatedImage" alt="Generated creative" />
+            <div class="image-container">
+              <img :src="generatedImage" alt="Generated creative" />
+              <div v-if="isRegenerating" class="image-overlay">
+                <div class="spinner"></div>
+                <p>Editing image…</p>
+              </div>
+            </div>
             <label class="field preview-field">
               <span>Edit prompt</span>
               <textarea v-model="previewPrompt" placeholder="Refine your prompt..."></textarea>
             </label>
-            <div class="row">
-              <button class="primary" :disabled="!canRegenerate || imageLoading" @click="regenerateImage">
-                <span v-if="!imageLoading">Regenerate</span>
-                <span v-else>Composing…</span>
-              </button>
-              <button class="ghost" @click="downloadImage">Download</button>
-              <button class="ghost" @click="clearGenerated">Clear</button>
-              <button class="ghost" @click="mode = 'video'">Generate ad</button>
+            <div class="result-actions">
+              <div class="row">
+                <button class="primary" :disabled="!canRegenerate || isRegenerating" @click="regenerateImage">
+                  <span v-if="!isRegenerating">Regenerate</span>
+                  <span v-else>Editing…</span>
+                </button>
+                <button class="ghost" @click="downloadImage">Download</button>
+              </div>
+              <div class="row secondary">
+                <button class="ghost" @click="clearGenerated">Clear</button>
+                <button class="ghost" @click="mode = 'video'">Generate ad</button>
+              </div>
             </div>
           </div>
         </div>
@@ -232,13 +242,14 @@ const videoDuration = ref('4');
 const videoInputFile = ref(null);
 const videoInputPreview = ref('');
 const showScriptPanel = ref(false);
+const isRegenerating = ref(false);
 
 let pollTimer = null;
 
 const maxFileSize = 12 * 1024 * 1024;
 
 const canGenerate = computed(() => objectFile.value);
-const canRegenerate = computed(() => objectFile.value && previewPrompt.value.trim());
+const canRegenerate = computed(() => generatedImage.value && previewPrompt.value.trim());
 const canGenerateScript = computed(
   () => videoInputPreview.value && videoPrompt.value.trim() && videoDuration.value
 );
@@ -336,6 +347,7 @@ function clearScene() {
 function clearGenerated() {
   generatedImage.value = '';
   previewPrompt.value = '';
+  isRegenerating.value = false;
   videoUrl.value = '';
   videoStatus.value = '';
   videoId.value = '';
@@ -378,7 +390,7 @@ function resetAll() {
   videoError.value = '';
 }
 
-async function doGenerateImage(promptText, regenerate = false) {
+async function generateImage() {
   imageError.value = '';
   videoError.value = '';
   if (!canGenerate.value) {
@@ -396,8 +408,7 @@ async function doGenerateImage(promptText, regenerate = false) {
     const payload = new FormData();
     payload.append('objectImage', objectFile.value);
     if (sceneFile.value) payload.append('sceneImage', sceneFile.value);
-    payload.append('prompt', promptText);
-    payload.append('regenerate', regenerate ? 'true' : 'false');
+    payload.append('prompt', prompt.value.trim());
 
     const response = await fetch('/api/generate-image', {
       method: 'POST',
@@ -411,7 +422,7 @@ async function doGenerateImage(promptText, regenerate = false) {
 
     const data = await response.json();
     generatedImage.value = `data:${data.mime};base64,${data.base64}`;
-    previewPrompt.value = promptText;
+    previewPrompt.value = prompt.value.trim();
     useGeneratedForVideo();
   } catch (error) {
     imageError.value = error.message || 'Something went wrong.';
@@ -420,12 +431,38 @@ async function doGenerateImage(promptText, regenerate = false) {
   }
 }
 
-function generateImage() {
-  doGenerateImage(prompt.value.trim(), false);
-}
+async function regenerateImage() {
+  imageError.value = '';
+  if (!canRegenerate.value) {
+    imageError.value = 'Please enter a prompt to edit the image.';
+    return;
+  }
 
-function regenerateImage() {
-  doGenerateImage(previewPrompt.value.trim(), true);
+  isRegenerating.value = true;
+
+  try {
+    const response = await fetch('/api/edit-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image: generatedImage.value,
+        prompt: previewPrompt.value.trim()
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || 'Failed to edit image.');
+    }
+
+    const data = await response.json();
+    generatedImage.value = `data:${data.mime};base64,${data.base64}`;
+    useGeneratedForVideo();
+  } catch (error) {
+    imageError.value = error.message || 'Something went wrong.';
+  } finally {
+    isRegenerating.value = false;
+  }
 }
 
 async function generateVideo() {
@@ -573,7 +610,7 @@ onBeforeUnmount(() => {
 }
 
 :root {
-  --panel-height: clamp(420px, 58vh, 500px);
+  --panel-height: clamp(480px, 62vh, 560px);
 }
 
 .top {
@@ -650,7 +687,7 @@ h1 {
 .panel {
   background: rgba(255, 255, 255, 0.85);
   border-radius: 28px;
-  padding: 20px;
+  padding: 22px;
   box-shadow: 0 30px 80px rgba(26, 33, 44, 0.12);
   min-height: var(--panel-height);
 }
@@ -859,20 +896,63 @@ select:focus {
 
 .result {
   display: grid;
-  gap: 16px;
+  gap: 14px;
   justify-items: center;
 }
 
 .result img,
 .result video {
   border-radius: 20px;
-  max-height: 180px;
+  max-height: 220px;
   width: 100%;
   object-fit: contain;
 }
 
+.image-container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.image-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #4a5866;
+}
+
 .preview-field {
   width: 100%;
+}
+
+.preview-field textarea {
+  min-height: 56px;
+}
+
+.result-actions {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+
+.result-actions .row {
+  justify-content: center;
+}
+
+.result-actions .row.secondary {
+  gap: 8px;
+}
+
+.result-actions .row.secondary .ghost {
+  padding: 8px 14px;
+  font-size: 13px;
 }
 
 .preview-field textarea {
@@ -914,7 +994,7 @@ select:focus {
 
   .panel,
   .preview-card {
-    padding: 20px;
+    padding: 18px;
   }
 }
 </style>

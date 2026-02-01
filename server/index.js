@@ -41,7 +41,7 @@ function base64ToBuffer(dataUrl) {
 
 function buildImagePrompt(userPrompt) {
   const base =
-    'Use image 1 as the subject and image 2 as the scene. Place the subject naturally into the scene with realistic lighting, shadow, and perspective. Preserve branding details, textures, and colors on the subject.';
+    'Use image 1 as the subject and image 2 as the scene. Place the subject naturally into the scene with realistic lighting, shadow, and perspective. Preserve branding details, textures, and colors on the subject. The output image should have an aspect ratio suitable for viewing on social media apps like Instagram and TikTok.';
   if (!userPrompt) return base;
   return `${base} ${userPrompt}`;
 }
@@ -215,21 +215,17 @@ app.post(
       return;
     }
 
-    const regenerate = req.body.regenerate === 'true';
-    const prompt = regenerate
-      ? buildRegeneratePrompt(req.body.prompt?.trim())
-      : buildImagePrompt(req.body.prompt?.trim());
+    const prompt = buildImagePrompt(req.body.prompt?.trim());
     console.log('[images] request start', {
       object: objectImage.originalname,
       scene: sceneImage.originalname,
-      regenerate,
       promptLength: prompt.length
     });
 
     try {
       console.log('[images] request payload', {
         model: 'gpt-image-1',
-        size: '1536x1024',
+        size: '1024x1536',
         output_format: 'png',
         input_fidelity: 'high',
         images: 2,
@@ -245,7 +241,7 @@ app.post(
       form.append('model', 'gpt-image-1');
       form.append('prompt', prompt);
       form.append('input_fidelity', 'high');
-      form.append('size', '1536x1024');
+      form.append('size', '1024x1536');
       form.append('output_format', 'png');
       form.append('image[]', new Blob([objectBuffer], { type: objectImage.mimetype }), objectImage.originalname);
       form.append('image[]', new Blob([sceneBuffer], { type: sceneImage.mimetype }), sceneImage.originalname);
@@ -284,6 +280,74 @@ app.post(
     }
   }
 );
+
+app.post('/api/edit-image', async (req, res) => {
+  if (!requireApiKey(req, res)) return;
+
+  const { image, prompt } = req.body || {};
+  if (!image) {
+    res.status(400).json({ message: 'Image is required.' });
+    return;
+  }
+
+  const parsed = base64ToBuffer(image);
+  if (!parsed) {
+    res.status(400).json({ message: 'Invalid image payload.' });
+    return;
+  }
+
+  const editPrompt = buildRegeneratePrompt(prompt?.trim());
+  console.log('[edit] request start', {
+    promptLength: editPrompt.length,
+    imageSize: parsed.buffer.length
+  });
+
+  try {
+    console.log('[edit] request payload', {
+      model: 'gpt-image-1',
+      size: '1024x1536',
+      output_format: 'png',
+      input_fidelity: 'high',
+      images: 1,
+      promptLength: editPrompt.length
+    });
+
+    const form = new FormData();
+    form.append('model', 'gpt-image-1');
+    form.append('prompt', editPrompt);
+    form.append('input_fidelity', 'high');
+    form.append('size', '1024x1536');
+    form.append('output_format', 'png');
+    form.append('image[]', new Blob([parsed.buffer], { type: parsed.mime }), 'source.png');
+
+    const response = await fetch('https://api.openai.com/v1/images/edits', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+      },
+      body: form
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      console.error('[edit] api error', data?.error?.message || data);
+      res.status(response.status).json({ message: data?.error?.message || 'Image editing failed.' });
+      return;
+    }
+
+    const base64 = data?.data?.[0]?.b64_json;
+    if (!base64) {
+      res.status(500).json({ message: 'No image returned from the API.' });
+      return;
+    }
+
+    console.log('[edit] response success', { status: response.status, bytes: base64.length });
+    res.json({ base64, mime: 'image/png' });
+  } catch (error) {
+    console.error('[edit] request failed', error.message || error);
+    res.status(500).json({ message: error.message || 'Image editing failed.' });
+  }
+});
 
 app.post('/api/generate-video', async (req, res) => {
   if (!requireApiKey(req, res)) return;
