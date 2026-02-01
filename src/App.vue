@@ -9,12 +9,12 @@
           in one place.
         </p>
       </div>
-      <div class="actions">
-        <button class="pill" @click="mode = 'creative'" :class="{ active: mode === 'creative' }">
-          Generate creative
+      <div class="mode-tabs">
+        <button class="tab" @click="mode = 'creative'" :class="{ active: mode === 'creative' }">
+          Create Creative
         </button>
-        <button class="pill" @click="mode = 'video'" :class="{ active: mode === 'video' }">
-          Generate ad
+        <button class="tab" @click="mode = 'video'" :class="{ active: mode === 'video' }">
+          Create Ad
         </button>
       </div>
     </header>
@@ -61,7 +61,6 @@
               <span v-if="!imageLoading">Generate creative</span>
               <span v-else>Composing…</span>
             </button>
-            <button class="ghost" @click="resetAll" :disabled="imageLoading">Reset</button>
           </div>
           <p v-if="imageError" class="error">{{ imageError }}</p>
         </div>
@@ -128,16 +127,21 @@
             </button>
             <button
               class="ghost"
+              :disabled="!videoScript || !videoSubmitted"
+              @click="toggleScriptPanel"
+            >
+              {{ showScriptPanel ? 'Hide script' : 'View script' }}
+            </button>
+            <button
+              class="primary ad-cta"
               :disabled="!canGenerateVideo || videoLoading"
               @click="generateVideo"
             >
               <span v-if="!videoLoading">Generate ad</span>
               <span v-else>Animating…</span>
             </button>
-            <button class="ghost" @click="clearGenerated" :disabled="videoLoading">Clear</button>
           </div>
           <p v-if="videoError" class="error">{{ videoError }}</p>
-          <div v-if="videoStatus" class="status">{{ videoStatus }}</div>
         </div>
       </div>
 
@@ -152,14 +156,13 @@
             <img :src="generatedImage" alt="Generated creative" />
             <div class="row">
               <button class="primary" @click="downloadImage">Download</button>
-              <button class="ghost" @click="clearGenerated">Clear</button>
               <button class="ghost" @click="mode = 'video'">Generate ad</button>
             </div>
           </div>
         </div>
 
         <div v-else class="preview-card">
-          <div v-if="!videoSubmitted" class="script-panel">
+          <div v-if="showScriptPanel || !videoSubmitted" class="script-panel">
             <p class="script-title">Generated script (editable)</p>
             <textarea
               v-model="videoScript"
@@ -169,16 +172,18 @@
             <div class="script-meta">Review and edit before generating the ad.</div>
           </div>
           <div v-else>
-            <div v-if="!videoUrl && !videoLoading" class="empty">Your ad video will appear here.</div>
             <div v-if="videoLoading" class="loading">
               <div class="spinner"></div>
               <p>Rendering your ad…</p>
+            </div>
+            <div v-else-if="videoStatus && !videoCompleted" class="status-panel">
+              <div class="spinner"></div>
+              <p>{{ videoStatusLabel }}</p>
             </div>
             <div v-if="videoUrl" class="result">
               <video controls :src="videoUrl"></video>
               <div class="row">
                 <button class="primary" @click="downloadVideo">Download</button>
-                <button class="ghost" @click="clearVideoOutput">Clear</button>
               </div>
             </div>
           </div>
@@ -216,6 +221,7 @@ const videoScript = ref('');
 const videoDuration = ref('4');
 const videoInputFile = ref(null);
 const videoInputPreview = ref('');
+const showScriptPanel = ref(false);
 
 let pollTimer = null;
 
@@ -228,6 +234,28 @@ const canGenerateScript = computed(
 const canGenerateVideo = computed(
   () => videoInputPreview.value && videoScript.value.trim() && videoDuration.value
 );
+const videoCompleted = computed(() => {
+  const status = (videoStatus.value || '').toLowerCase().trim();
+  return status.includes('completed');
+});
+const videoStatusLabel = computed(() => {
+  const status = (videoStatus.value || '').toLowerCase().trim();
+  if (!status) return '';
+  const normalized = status.replace(/[\s-]+/g, '_');
+  const labels = {
+    in_progress: 'In Progress',
+    queued: 'Queued',
+    pending: 'Queued',
+    running: 'In Progress',
+    processing: 'In Progress',
+    rendering: 'Rendering',
+    submitted: 'Submitting',
+    submitted_to_sora: 'Submitting',
+    completed: 'Completed',
+    failed: 'Failed'
+  };
+  return labels[normalized] || 'In Progress';
+});
 
 function validateImage(file) {
   if (!file) return 'Please select an image.';
@@ -308,6 +336,7 @@ function clearVideoInput() {
   videoInputPreview.value = '';
   videoInputFile.value = null;
   videoScript.value = '';
+  showScriptPanel.value = false;
 }
 
 function clearVideoOutput() {
@@ -315,6 +344,7 @@ function clearVideoOutput() {
   videoStatus.value = '';
   videoId.value = '';
   videoSubmitted.value = false;
+  showScriptPanel.value = false;
   if (pollTimer) clearInterval(pollTimer);
 }
 
@@ -328,6 +358,7 @@ function resetAll() {
   videoScript.value = '';
   videoDuration.value = '4';
   videoSubmitted.value = false;
+  showScriptPanel.value = false;
   objectError.value = '';
   sceneError.value = '';
   imageError.value = '';
@@ -387,6 +418,7 @@ async function generateVideo() {
 
   videoLoading.value = true;
   videoSubmitted.value = true;
+  showScriptPanel.value = false;
   videoStatus.value = 'Submitting to Sora…';
   videoUrl.value = '';
 
@@ -435,6 +467,7 @@ async function generateVideoScript() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        system: 'Generate this script suitable for an Instagram ad.',
         prompt: videoPrompt.value.trim(),
         seconds: Number(videoDuration.value),
         image: videoInputPreview.value
@@ -448,11 +481,17 @@ async function generateVideoScript() {
 
     const data = await response.json();
     videoScript.value = data.script || '';
+    showScriptPanel.value = true;
   } catch (error) {
     videoError.value = error.message || 'Something went wrong.';
   } finally {
     scriptLoading.value = false;
   }
+}
+
+function toggleScriptPanel() {
+  if (!videoScript.value) return;
+  showScriptPanel.value = !showScriptPanel.value;
 }
 
 function pollVideo() {
@@ -510,6 +549,10 @@ onBeforeUnmount(() => {
   background: radial-gradient(circle at top left, #fff6e1 0%, #f5f0ea 40%, #e7f4f2 100%);
 }
 
+:root {
+  --panel-height: clamp(420px, 58vh, 500px);
+}
+
 .top {
   display: grid;
   gap: 24px;
@@ -539,47 +582,60 @@ h1 {
   line-height: 1.6;
 }
 
-.actions {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+.mode-tabs {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(21, 112, 102, 0.12);
+  box-shadow: 0 10px 24px rgba(26, 33, 44, 0.08);
+  width: fit-content;
+  margin: 0 auto;
 }
 
-.pill {
-  border: 1px solid rgba(21, 112, 102, 0.2);
-  background: #fff;
+.tab {
+  border: none;
+  background: transparent;
   border-radius: 999px;
-  padding: 10px 18px;
+  padding: 8px 16px;
   font-weight: 600;
+  color: #2f3c4a;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.pill.active {
+.tab:hover {
+  background: rgba(21, 112, 102, 0.08);
+}
+
+.tab.active {
   background: #157066;
   color: #fff;
-  border-color: #157066;
-  box-shadow: 0 10px 24px rgba(21, 112, 102, 0.25);
+  box-shadow: 0 10px 20px rgba(21, 112, 102, 0.2);
 }
 
 .stage {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 28px;
+  align-items: stretch;
 }
 
 .panel {
   background: rgba(255, 255, 255, 0.85);
   border-radius: 28px;
-  padding: 22px;
+  padding: 20px;
   box-shadow: 0 30px 80px rgba(26, 33, 44, 0.12);
-  align-self: start;
+  min-height: var(--panel-height);
 }
 
 .stack {
   display: grid;
-  gap: 20px;
+  gap: 16px;
+  align-content: start;
 }
 
 .drop-grid {
@@ -591,8 +647,8 @@ h1 {
 .drop {
   border: 1.5px dashed #cdd7dc;
   border-radius: 18px;
-  padding: 14px;
-  min-height: 140px;
+  padding: 12px;
+  min-height: 120px;
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -634,7 +690,7 @@ h1 {
 }
 
 .drop.single {
-  min-height: 160px;
+  min-height: 140px;
 }
 
 .inline-actions {
@@ -677,7 +733,7 @@ select {
 }
 
 textarea {
-  min-height: 72px;
+  min-height: 64px;
   resize: vertical;
 }
 
@@ -705,6 +761,16 @@ select:focus {
   transition: transform 0.2s ease;
 }
 
+.ad-cta {
+  background: linear-gradient(120deg, #0f6a5e, #2aa889);
+  box-shadow: 0 16px 30px rgba(21, 112, 102, 0.24);
+  padding: 11px 22px;
+}
+
+.ad-cta:disabled {
+  box-shadow: none;
+}
+
 .primary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -725,12 +791,12 @@ select:focus {
   font-size: 13px;
 }
 
-.status {
-  background: #f1f4f7;
-  border-radius: 12px;
-  padding: 8px 12px;
-  font-size: 13px;
+.status-panel {
+  display: grid;
+  gap: 10px;
+  place-items: center;
   color: #556270;
+  font-size: 13px;
 }
 
 .preview {
@@ -741,8 +807,7 @@ select:focus {
   background: rgba(255, 255, 255, 0.85);
   border-radius: 28px;
   padding: 22px;
-  min-height: 320px;
-  height: 320px;
+  min-height: var(--panel-height);
   box-shadow: 0 30px 80px rgba(26, 33, 44, 0.12);
   display: grid;
   align-items: center;
@@ -812,8 +877,8 @@ select:focus {
 }
 
 @media (max-width: 860px) {
-  .actions {
-    justify-content: flex-start;
+  .mode-tabs {
+    justify-content: center;
   }
 
   .panel,
