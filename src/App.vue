@@ -289,7 +289,7 @@
               <div class="script-meta">Review and edit before generating the ad.</div>
             </div>
             <div v-else class="video-output">
-              <div v-if="videoPending" class="ad-center">
+              <div v-if="videoPending" class="loading">
                 <div class="spinner"></div>
                 <p>{{ videoPendingLabel }}</p>
               </div>
