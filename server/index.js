@@ -203,7 +203,7 @@ app.post('/api/generate-video-script', async (req, res) => {
         input: [
           {
             role: 'system',
-            content: 'You are a creative director writing concise ad scripts for premium brands.'
+            content: 'You are a creative director writing concise ad scripts for premium brands. Only output the script, no other text.'
           },
           {
             role: 'user',

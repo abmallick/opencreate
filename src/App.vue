@@ -1,13 +1,9 @@
 <template>
-  <div class="page">
+  <div class="page" :class="{ 'ad-mode': mode === 'video' }">
     <header class="top">
       <div>
         <p class="eyebrow">Creative Studio</p>
         <h1>Compose standout product visuals.</h1>
-        <p class="lede">
-          A minimal flow for marketing teams: upload a product, set the scene, and generate image + video
-          in one place.
-        </p>
       </div>
       <div class="mode-tabs">
         <button class="tab" @click="mode = 'creative'" :class="{ active: mode === 'creative' }">
@@ -20,7 +16,7 @@
     </header>
 
     <section class="stage">
-      <div class="panel">
+      <div class="panel" :class="{ 'creative-panel': mode === 'creative' }">
         <div v-if="mode === 'creative'" class="stack">
           <div class="drop-grid">
             <label class="drop" :class="{ filled: objectPreview }">
@@ -48,6 +44,37 @@
             </label>
           </div>
 
+          <div class="preset-section">
+            <div class="preset-header">
+              <p class="preset-title">Creative presets</p>
+              <span v-if="creativePresetBusy" class="preset-status">Loading…</span>
+            </div>
+            <div class="preset-grid">
+              <button
+                v-for="preset in creativePresets"
+                :key="preset.id"
+                type="button"
+                class="preset-card"
+                :class="{ active: activeCreativePreset === preset.id }"
+                :disabled="creativePresetBusy"
+                @click="applyCreativePreset(preset)"
+              >
+                <div class="preset-thumbs">
+                  <div class="preset-thumb">
+                    <img :src="preset.objectImage" :alt="`${preset.label} product`" />
+                  </div>
+                  <div class="preset-thumb">
+                    <img :src="preset.sceneImage" :alt="`${preset.label} scene`" />
+                  </div>
+                </div>
+                <div class="preset-text">
+                  <p class="preset-label">{{ preset.label }}</p>
+                  <p class="preset-desc">{{ preset.description }}</p>
+                </div>
+              </button>
+            </div>
+          </div>
+
           <label class="field">
             <span>Prompt for creative</span>
             <textarea
@@ -66,27 +93,15 @@
         </div>
 
         <div v-else class="stack">
-          <div class="drop single" :class="{ filled: videoInputPreview }">
-            <div v-if="!videoInputPreview" class="drop-empty">
-              <strong>Use generated image or upload one</strong>
-              <span>We will use this as the first frame</span>
-              <label class="tiny">
-                <input type="file" accept="image/*" @change="onVideoInputImage" />
-                <span>Upload image</span>
-              </label>
-              <button
-                v-if="generatedImage"
-                type="button"
-                class="ghost"
-                @click="useGeneratedForVideo"
-              >
-                Use generated
-              </button>
-            </div>
-            <div v-else class="drop-preview">
-              <img :src="videoInputPreview" alt="Video input preview" />
-              <div class="inline-actions">
-                <button type="button" class="ghost" @click="clearVideoInput">Replace</button>
+          <div class="ad-form-body">
+            <div class="drop single" :class="{ filled: videoInputPreview }">
+              <div v-if="!videoInputPreview" class="drop-empty">
+                <strong>Use generated image or upload one</strong>
+                <span>We will use this as the first frame</span>
+                <label class="tiny">
+                  <input type="file" accept="image/*" @change="onVideoInputImage" />
+                  <span>Upload image</span>
+                </label>
                 <button
                   v-if="generatedImage"
                   type="button"
@@ -96,25 +111,67 @@
                   Use generated
                 </button>
               </div>
+              <div v-else class="drop-preview">
+                <img :src="videoInputPreview" alt="Video input preview" />
+                <div class="inline-actions">
+                  <button type="button" class="ghost" @click="clearVideoInput">Replace</button>
+                  <button
+                    v-if="generatedImage"
+                    type="button"
+                    class="ghost"
+                    @click="useGeneratedForVideo"
+                  >
+                    Use generated
+                  </button>
+                </div>
+              </div>
             </div>
+
+            <div class="preset-section">
+              <div class="preset-header">
+                <p class="preset-title">Ad presets</p>
+                <span v-if="adPresetBusy" class="preset-status">Loading…</span>
+              </div>
+              <div class="preset-grid">
+                <button
+                  v-for="preset in adPresets"
+                  :key="preset.id"
+                  type="button"
+                  class="preset-card"
+                  :class="{ active: activeAdPreset === preset.id }"
+                  :disabled="adPresetBusy"
+                  @click="applyAdPreset(preset)"
+                >
+                  <div class="preset-thumbs single">
+                    <div class="preset-thumb">
+                      <img :src="preset.image" :alt="`${preset.label} frame`" />
+                    </div>
+                  </div>
+                  <div class="preset-text">
+                    <p class="preset-label">{{ preset.label }}</p>
+                    <p class="preset-desc">{{ preset.description }}</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <label class="field">
+              <span>Ad brief</span>
+              <textarea
+                v-model="videoPrompt"
+                placeholder="Couple sits on the sofa, cozy weekend feel, Instagram style"
+              ></textarea>
+            </label>
+
+            <label class="field">
+              <span>Video duration</span>
+              <select v-model="videoDuration">
+                <option value="4">4 seconds</option>
+                <option value="8">8 seconds</option>
+                <option value="12">12 seconds</option>
+              </select>
+            </label>
           </div>
-
-          <label class="field">
-            <span>Ad brief</span>
-            <textarea
-              v-model="videoPrompt"
-              placeholder="Couple sits on the sofa, cozy weekend feel, Instagram style"
-            ></textarea>
-          </label>
-
-          <label class="field">
-            <span>Video duration</span>
-            <select v-model="videoDuration">
-              <option value="4">4 seconds</option>
-              <option value="8">8 seconds</option>
-              <option value="12">12 seconds</option>
-            </select>
-          </label>
 
           <div class="row">
             <button
@@ -146,64 +203,84 @@
       </div>
 
       <div class="preview">
-        <div v-if="mode === 'creative'" class="preview-card">
+        <div v-show="mode === 'creative'" class="preview-card creative-preview">
           <div v-if="!generatedImage && !imageLoading" class="empty">Your creative appears here.</div>
           <div v-if="imageLoading && !generatedImage" class="loading">
             <div class="spinner"></div>
             <p>Blending subject with scene…</p>
           </div>
-          <div v-if="generatedImage" class="result">
-            <div class="image-container">
-              <img :src="generatedImage" alt="Generated creative" />
-              <div v-if="isRegenerating" class="image-overlay">
-                <div class="spinner"></div>
-                <p>Editing image…</p>
+          <div v-if="generatedImage" class="result creative-result">
+            <div class="creative-result-body">
+              <div class="cta-column">
+                <button class="ghost" @click="downloadImage">Download</button>
+                <button class="ghost" @click="clearGenerated">Clear</button>
+                <button class="primary ad-cta" @click="mode = 'video'">Generate ad</button>
               </div>
-            </div>
-            <label class="field preview-field">
-              <span>Edit prompt</span>
-              <textarea v-model="previewPrompt" placeholder="Refine your prompt..."></textarea>
-            </label>
-            <div class="result-actions">
-              <div class="row">
+              <div class="creative-media">
+                <div
+                  ref="imageViewport"
+                  class="image-viewport"
+                  @pointerdown="startImagePan"
+                  @pointermove="moveImagePan"
+                  @pointerup="endImagePan"
+                  @pointerleave="endImagePan"
+                  @pointercancel="endImagePan"
+                  @wheel.prevent="onImageWheel"
+                >
+                  <img
+                    class="zoomable-image"
+                    :src="generatedImage"
+                    alt="Generated creative"
+                    :style="imageTransform"
+                    draggable="false"
+                  />
+                  <div v-if="isRegenerating" class="image-overlay">
+                    <div class="spinner"></div>
+                    <p>Editing image…</p>
+                  </div>
+                </div>
+              </div>
+              <div class="prompt-row">
+                <label class="field preview-field">
+                  <span>Edit prompt</span>
+                  <textarea v-model="previewPrompt" placeholder="Refine your prompt..."></textarea>
+                </label>
                 <button class="primary" :disabled="!canRegenerate || isRegenerating" @click="regenerateImage">
                   <span v-if="!isRegenerating">Regenerate</span>
                   <span v-else>Editing…</span>
                 </button>
-                <button class="ghost" @click="downloadImage">Download</button>
-              </div>
-              <div class="row secondary">
-                <button class="ghost" @click="clearGenerated">Clear</button>
-                <button class="ghost" @click="mode = 'video'">Generate ad</button>
               </div>
             </div>
           </div>
         </div>
 
-        <div v-else class="preview-card">
-          <div v-if="showScriptPanel || !videoSubmitted" class="script-panel">
-            <p class="script-title">Generated script (editable)</p>
-            <textarea
-              v-model="videoScript"
-              class="script-textarea"
-              placeholder="Generate a script to preview here"
-            ></textarea>
-            <div class="script-meta">Review and edit before generating the ad.</div>
-          </div>
-          <div v-else>
-            <div v-if="videoLoading" class="loading">
-              <div class="spinner"></div>
-              <p>Rendering your ad…</p>
+        <div v-show="mode === 'video'" class="preview-card video-preview ad-preview-panel">
+          <div class="ad-preview-body">
+            <div v-if="showScriptPanel || !videoSubmitted" class="script-panel">
+              <p class="script-title">Generated script (editable)</p>
+              <textarea
+                v-model="videoScript"
+                class="script-textarea"
+                placeholder="Generate a script to preview here"
+              ></textarea>
+              <div class="script-meta">Review and edit before generating the ad.</div>
             </div>
-            <div v-else-if="videoStatus && !videoCompleted" class="status-panel">
-              <div class="spinner"></div>
-              <p>{{ videoStatusLabel }}</p>
-            </div>
-            <div v-if="videoUrl" class="result">
-              <video controls :src="videoUrl"></video>
-              <div class="row">
-                <button class="primary" @click="downloadVideo">Download</button>
+            <div v-else class="video-output">
+              <div v-if="videoLoading" class="ad-center">
+                <div class="spinner"></div>
+                <p>Rendering your ad…</p>
               </div>
+              <div v-else-if="videoStatus && !videoCompleted" class="ad-center">
+                <div class="spinner"></div>
+                <p>{{ videoStatusLabel }}</p>
+              </div>
+              <div v-else-if="videoUrl" class="result">
+                <video controls :src="videoUrl"></video>
+                <div class="row">
+                  <button class="primary" @click="downloadVideo">Download</button>
+                </div>
+              </div>
+              <div v-else class="empty">Generate an ad to preview it here.</div>
             </div>
           </div>
         </div>
@@ -213,9 +290,45 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 
 const mode = ref('creative');
+
+const creativePresets = [
+{
+    id: 'creative-1',
+    label: 'Candle by bedside',
+    description: 'Candle on bedside table.',
+    objectImage: '/presets/creative-1-object.jpg',
+    sceneImage: '/presets/creative-1-scene.jpg',
+    prompt: 'Set the candle on the bedside table.'
+  },
+  {
+    id: 'creative-2',
+    label: 'Sofa by the river bank.',
+    description: 'Premium sofa by the river bank.',
+    objectImage: '/presets/creative-2-object.jpg',
+    sceneImage: '/presets/creative-2-scene.jpg',
+    prompt: 'Place the sofa by the river bank with warm daylight and soft shadows.'
+  }
+];
+
+const adPresets = [
+{
+    id: 'ad-1',
+    label: 'Cozy bedroom',
+    description: 'Cozy bedroom with candle and warm light.',
+    image: '/presets/ad-1.png',
+    prompt: 'Couple sits on the bed, warm light, Instagram style.'
+  },
+  {
+    id: 'ad-2',
+    label: 'Weekend Cozy',
+    description: 'Relaxed couple, chilling.',
+    image: '/presets/ad-2.png',
+    prompt: 'Couple sits on the sofa, cozy weekend feel, Instagram style.',
+  }
+];
 
 const objectFile = ref(null);
 const sceneFile = ref(null);
@@ -243,6 +356,16 @@ const videoInputFile = ref(null);
 const videoInputPreview = ref('');
 const showScriptPanel = ref(false);
 const isRegenerating = ref(false);
+const imageViewport = ref(null);
+const imageZoom = ref(1);
+const imagePan = ref({ x: 0, y: 0 });
+const isPanningImage = ref(false);
+const panStart = ref({ x: 0, y: 0 });
+const panOrigin = ref({ x: 0, y: 0 });
+const creativePresetBusy = ref(false);
+const adPresetBusy = ref(false);
+const activeCreativePreset = ref('');
+const activeAdPreset = ref('');
 
 let pollTimer = null;
 
@@ -279,6 +402,10 @@ const videoStatusLabel = computed(() => {
   return labels[normalized] || 'In Progress';
 });
 
+const imageTransform = computed(() => ({
+  transform: `translate(${imagePan.value.x}px, ${imagePan.value.y}px) scale(${imageZoom.value})`
+}));
+
 function validateImage(file) {
   if (!file) return 'Please select an image.';
   if (!file.type.startsWith('image/')) return 'Only image files are supported.';
@@ -292,6 +419,70 @@ function toPreview(file, setter) {
   reader.readAsDataURL(file);
 }
 
+async function fetchFileFromUrl(url, fallbackName) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Preset asset not found: ${url}`);
+  }
+  const blob = await response.blob();
+  const name = url.split('/').pop() || fallbackName;
+  return new File([blob], name, { type: blob.type || 'image/jpeg' });
+}
+
+async function applyCreativePreset(preset) {
+  imageError.value = '';
+  videoError.value = '';
+  objectError.value = '';
+  sceneError.value = '';
+  creativePresetBusy.value = true;
+  activeCreativePreset.value = preset.id;
+  clearGenerated();
+
+  try {
+    const [object, scene] = await Promise.all([
+      fetchFileFromUrl(preset.objectImage, 'object.jpg'),
+      fetchFileFromUrl(preset.sceneImage, 'scene.jpg')
+    ]);
+
+    objectFile.value = object;
+    sceneFile.value = scene;
+    toPreview(object, (val) => (objectPreview.value = val));
+    toPreview(scene, (val) => (scenePreview.value = val));
+    prompt.value = preset.prompt;
+  } catch (error) {
+    activeCreativePreset.value = '';
+    imageError.value = error.message || 'Unable to load preset.';
+  } finally {
+    creativePresetBusy.value = false;
+  }
+}
+
+async function applyAdPreset(preset) {
+  videoError.value = '';
+  adPresetBusy.value = true;
+  activeAdPreset.value = preset.id;
+  clearVideoOutput();
+  videoInputPreview.value = '';
+  videoInputFile.value = null;
+  videoScript.value = '';
+  showScriptPanel.value = false;
+
+  try {
+    const file = await fetchFileFromUrl(preset.image, 'ad.jpg');
+    videoInputFile.value = file;
+    toPreview(file, (val) => (videoInputPreview.value = val));
+    videoPrompt.value = preset.prompt;
+    if (preset.duration) {
+      videoDuration.value = preset.duration;
+    }
+  } catch (error) {
+    activeAdPreset.value = '';
+    videoError.value = error.message || 'Unable to load preset.';
+  } finally {
+    adPresetBusy.value = false;
+  }
+}
+
 function onObjectImage(event) {
   const file = event.target.files?.[0];
   objectError.value = validateImage(file);
@@ -302,6 +493,7 @@ function onObjectImage(event) {
   }
   objectFile.value = file;
   toPreview(file, (val) => (objectPreview.value = val));
+  activeCreativePreset.value = '';
 }
 
 function onSceneImage(event) {
@@ -314,6 +506,7 @@ function onSceneImage(event) {
   }
   sceneFile.value = file;
   toPreview(file, (val) => (scenePreview.value = val));
+  activeCreativePreset.value = '';
 }
 
 function onVideoInputImage(event) {
@@ -326,6 +519,7 @@ function onVideoInputImage(event) {
   }
   videoInputFile.value = file;
   toPreview(file, (val) => (videoInputPreview.value = val));
+  activeAdPreset.value = '';
 }
 
 function useGeneratedForVideo() {
@@ -337,23 +531,20 @@ function useGeneratedForVideo() {
 function clearObject() {
   objectFile.value = null;
   objectPreview.value = '';
+  activeCreativePreset.value = '';
 }
 
 function clearScene() {
   sceneFile.value = null;
   scenePreview.value = '';
+  activeCreativePreset.value = '';
 }
 
 function clearGenerated() {
   generatedImage.value = '';
   previewPrompt.value = '';
   isRegenerating.value = false;
-  videoUrl.value = '';
-  videoStatus.value = '';
-  videoId.value = '';
-  videoScript.value = '';
-  videoSubmitted.value = false;
-  if (pollTimer) clearInterval(pollTimer);
+  resetImageTransform();
 }
 
 function clearVideoInput() {
@@ -361,6 +552,7 @@ function clearVideoInput() {
   videoInputFile.value = null;
   videoScript.value = '';
   showScriptPanel.value = false;
+  activeAdPreset.value = '';
 }
 
 function clearVideoOutput() {
@@ -377,6 +569,7 @@ function resetAll() {
   clearScene();
   clearGenerated();
   clearVideoInput();
+  clearVideoOutput();
   prompt.value = '';
   previewPrompt.value = '';
   videoPrompt.value = '';
@@ -390,6 +583,59 @@ function resetAll() {
   videoError.value = '';
 }
 
+function resetImageTransform() {
+  imageZoom.value = 1;
+  imagePan.value = { x: 0, y: 0 };
+  isPanningImage.value = false;
+}
+
+function clampImagePan(nextPan) {
+  const viewport = imageViewport.value;
+  if (!viewport) return nextPan;
+  const width = viewport.clientWidth;
+  const height = viewport.clientHeight;
+  const maxOffsetX = Math.max(0, ((imageZoom.value - 1) * width) / 2);
+  const maxOffsetY = Math.max(0, ((imageZoom.value - 1) * height) / 2);
+  return {
+    x: Math.min(maxOffsetX, Math.max(-maxOffsetX, nextPan.x)),
+    y: Math.min(maxOffsetY, Math.max(-maxOffsetY, nextPan.y))
+  };
+}
+
+function startImagePan(event) {
+  if (!generatedImage.value) return;
+  isPanningImage.value = true;
+  panStart.value = { x: event.clientX, y: event.clientY };
+  panOrigin.value = { ...imagePan.value };
+  event.currentTarget?.setPointerCapture?.(event.pointerId);
+}
+
+function moveImagePan(event) {
+  if (!isPanningImage.value) return;
+  const dx = event.clientX - panStart.value.x;
+  const dy = event.clientY - panStart.value.y;
+  imagePan.value = clampImagePan({ x: panOrigin.value.x + dx, y: panOrigin.value.y + dy });
+}
+
+function endImagePan(event) {
+  if (!isPanningImage.value) return;
+  isPanningImage.value = false;
+  event.currentTarget?.releasePointerCapture?.(event.pointerId);
+}
+
+function onImageWheel(event) {
+  if (!generatedImage.value) return;
+  const delta = event.deltaY || 0;
+  const zoomStep = delta > 0 ? -0.1 : 0.1;
+  const nextZoom = Math.min(3, Math.max(1, imageZoom.value + zoomStep));
+  imageZoom.value = Number(nextZoom.toFixed(2));
+  imagePan.value = clampImagePan(imagePan.value);
+}
+
+watch(generatedImage, () => {
+  resetImageTransform();
+});
+
 async function generateImage() {
   imageError.value = '';
   videoError.value = '';
@@ -400,9 +646,6 @@ async function generateImage() {
 
   imageLoading.value = true;
   generatedImage.value = '';
-  videoUrl.value = '';
-  videoStatus.value = '';
-  videoId.value = '';
 
   try {
     const payload = new FormData();
@@ -604,20 +847,82 @@ onBeforeUnmount(() => {
 <style scoped>
 .page {
   min-height: 100vh;
-  padding: 36px 5vw 48px;
+  padding: 24px 5vw 40px;
   background: radial-gradient(circle at top left, #fff6e1 0%, #f5f0ea 40%, #e7f4f2 100%);
 }
 
+.page.ad-mode {
+  --panel-height: 100%;
+  height: 100vh;
+  height: 100svh;
+  padding: 18px 5vw clamp(18px, 3vh, 28px);
+  display: flex;
+  flex-direction: column;
+}
+
+.page.ad-mode .top {
+  margin-bottom: 12px;
+  flex: 0 0 auto;
+}
+
+.page.ad-mode .stage {
+  gap: 18px;
+  flex: 1;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.page.ad-mode .panel,
+.page.ad-mode .preview-card {
+  padding: 16px;
+  height: 100%;
+  min-height: 0;
+}
+
+.page.ad-mode .panel .stack {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.page.ad-mode .panel .stack > * {
+  flex: 0 0 auto;
+}
+
+.page.ad-mode .panel .stack .row {
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+.page.ad-mode .ad-form-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  gap: 12px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.page.ad-mode .ad-form-body textarea {
+  min-height: 44px;
+  max-height: 96px;
+}
+
+.page.ad-mode select {
+  height: 42px;
+}
+
 :root {
-  --panel-height: clamp(480px, 62vh, 560px);
+  --panel-height: clamp(420px, 56vh, 520px);
 }
 
 .top {
   display: grid;
-  gap: 24px;
+  gap: 18px;
   align-items: end;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  margin-bottom: 28px;
+  margin-bottom: 20px;
 }
 
 .eyebrow {
@@ -707,7 +1012,7 @@ h1 {
   border: 1.5px dashed #cdd7dc;
   border-radius: 18px;
   padding: 12px;
-  min-height: 120px;
+  min-height: 180px;
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -744,12 +1049,112 @@ h1 {
 
 .drop-preview img {
   border-radius: 16px;
-  max-height: 140px;
+  max-height: 120px;
   object-fit: cover;
 }
 
 .drop.single {
-  min-height: 140px;
+  min-height: 180px;
+}
+
+.preset-section {
+  display: grid;
+  gap: 10px;
+}
+
+.preset-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.preset-title {
+  margin: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  color: #6b7785;
+}
+
+.preset-status {
+  font-size: 12px;
+  color: #4a5866;
+}
+
+.preset-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.preset-card {
+  border: 1px solid #dfe5ea;
+  border-radius: 16px;
+  padding: 12px;
+  background: #fff;
+  display: grid;
+  gap: 10px;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.preset-card:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+}
+
+.preset-card:hover {
+  border-color: #157066;
+  box-shadow: 0 12px 26px rgba(21, 112, 102, 0.12);
+  transform: translateY(-1px);
+}
+
+.preset-card.active {
+  border-color: #157066;
+  box-shadow: 0 0 0 2px rgba(21, 112, 102, 0.18);
+}
+
+.preset-thumbs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.preset-thumbs.single {
+  grid-template-columns: 1fr;
+}
+
+.preset-thumb {
+  border-radius: 12px;
+  overflow: hidden;
+  background: #eef2f4;
+  height: 78px;
+}
+
+.preset-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.preset-text {
+  display: grid;
+  gap: 4px;
+}
+
+.preset-label {
+  margin: 0;
+  font-weight: 600;
+  color: #2f3c4a;
+  font-size: 13px;
+}
+
+.preset-desc {
+  margin: 0;
+  font-size: 12px;
+  color: #6b7785;
 }
 
 .inline-actions {
@@ -858,6 +1263,29 @@ select:focus {
   font-size: 13px;
 }
 
+.video-output {
+  height: 100%;
+  display: grid;
+  grid-template-rows: 1fr;
+}
+
+.video-output .loading,
+.video-output .status-panel {
+  height: 100%;
+}
+
+.video-output .result {
+  width: 100%;
+  align-content: start;
+  justify-items: stretch;
+}
+
+.video-output .result .row {
+  justify-content: center;
+  align-items: center;
+  align-self: start;
+}
+
 .preview {
   display: grid;
 }
@@ -869,12 +1297,63 @@ select:focus {
   min-height: var(--panel-height);
   box-shadow: 0 30px 80px rgba(26, 33, 44, 0.12);
   display: grid;
-  align-items: center;
+  align-items: stretch;
+}
+
+.creative-panel {
+  min-height: var(--panel-height);
+}
+
+.creative-panel .stack {
+  gap: 14px;
+}
+
+.creative-panel .drop-grid {
+  gap: 12px;
+}
+
+.creative-panel .drop {
+  min-height: 150px;
+}
+
+.creative-panel .drop-preview img {
+  max-height: 110px;
+}
+
+.creative-preview {
+  height: var(--panel-height);
+}
+
+.video-preview {
+  height: var(--panel-height);
+}
+
+.ad-preview-panel {
+  height: var(--panel-height);
+  overflow: hidden;
+}
+
+.ad-preview-body {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.ad-center {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: #556270;
+  gap: 10px;
 }
 
 .empty {
   color: #4a5866;
   font-size: 14px;
+  display: grid;
+  place-items: center;
+  height: 100%;
 }
 
 .loading {
@@ -902,9 +1381,12 @@ select:focus {
 .result img,
 .result video {
   border-radius: 20px;
-  max-height: 220px;
   width: 100%;
   object-fit: contain;
+}
+
+.result video {
+  max-height: 320px;
 }
 
 .image-container {
@@ -918,7 +1400,7 @@ select:focus {
   position: absolute;
   inset: 0;
   background: rgba(255, 255, 255, 0.85);
-  border-radius: 20px;
+  border-radius: inherit;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -935,34 +1417,94 @@ select:focus {
   min-height: 56px;
 }
 
-.result-actions {
+.creative-result {
+  width: 100%;
+  justify-items: stretch;
+}
+
+.creative-result-body {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(160px, 200px) 1fr;
+  gap: 18px;
+  align-items: start;
+  height: 100%;
+}
+
+.cta-column {
   display: grid;
   gap: 10px;
+  align-content: start;
+}
+
+.cta-column .primary,
+.cta-column .ghost {
   width: 100%;
 }
 
-.result-actions .row {
-  justify-content: center;
+.creative-media {
+  display: grid;
+  gap: 12px;
+  grid-template-rows: minmax(0, 1fr) auto;
 }
 
-.result-actions .row.secondary {
-  gap: 8px;
+.prompt-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  width: 100%;
+  grid-column: 1 / -1;
 }
 
-.result-actions .row.secondary .ghost {
-  padding: 8px 14px;
-  font-size: 13px;
+.prompt-row .preview-field {
+  flex: 1;
+}
+
+.prompt-row .primary {
+  white-space: nowrap;
+}
+
+.image-viewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  min-height: 320px;
+  max-height: 460px;
+  border-radius: 24px;
+  overflow: hidden;
+  background: #f7f4ef;
+  cursor: grab;
+  display: grid;
+  place-items: center;
+  touch-action: none;
+  height: 100%;
+}
+
+.image-viewport:active {
+  cursor: grabbing;
+}
+
+.zoomable-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform-origin: center;
+  transition: transform 0.06s ease-out;
+  user-select: none;
+  pointer-events: none;
 }
 
 .preview-field textarea {
-  min-height: 48px;
+  min-height: 72px;
 }
 
 .script-panel {
   width: 100%;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   height: 100%;
+  flex: 1;
 }
 
 .script-title {
@@ -972,7 +1514,12 @@ select:focus {
 }
 
 .script-textarea {
-  min-height: 200px;
+  flex: 1;
+  min-height: clamp(320px, 58vh, 640px);
+  max-height: none;
+  height: 100%;
+  resize: none;
+  overflow: auto;
 }
 
 .script-meta {
@@ -994,6 +1541,19 @@ select:focus {
   .panel,
   .preview-card {
     padding: 18px;
+  }
+
+  .creative-result-body {
+    grid-template-columns: 1fr;
+  }
+
+  .cta-column {
+    grid-auto-flow: row;
+  }
+
+  .prompt-row {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 </style>
