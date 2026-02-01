@@ -14,7 +14,7 @@ npm run dev:full
 - API server: http://localhost:8787
 
 Live Deployment (try it out): http://13.233.36.252:5173/
-(Login credentials separately supplied)
+(Login credentials separately supplied in google form. search for username:)
 ## Demo steps
 
 1. Open http://localhost:5173.
