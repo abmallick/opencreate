@@ -527,7 +527,6 @@ async function generateVideoScript() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        system: 'Generate this script suitable for an Instagram ad.',
         prompt: videoPrompt.value.trim(),
         seconds: Number(videoDuration.value),
         image: videoInputPreview.value

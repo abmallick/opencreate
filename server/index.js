@@ -55,32 +55,77 @@ function buildRegeneratePrompt(userPrompt) {
 
 function buildVideoPrompt(userPrompt) {
   const cleaned = userPrompt?.trim();
-  const marketingBrief =
-    'High-end marketing film. Premium, polished, brand-safe visuals. Crisp product focus, clean composition, natural motion, and cinematic lighting.';
-  if (!cleaned) return marketingBrief;
+  const timingMatches = cleaned ? [...cleaned.matchAll(/\[(\d{2}:\d{2})-(\d{2}:\d{2})\]/g)] : [];
+  const shotCount = timingMatches.length;
+  const lastEnd = timingMatches.length ? timingMatches[timingMatches.length - 1][2] : null;
+  const durationSeconds = lastEnd
+    ? lastEnd
+        .split(':')
+        .map((value) => Number(value))
+        .reduce((total, value) => total * 60 + value, 0)
+    : null;
 
-  return [
-    'Format & Look:',
-    marketingBrief,
+  const formatAndLookLine =
+    durationSeconds != null
+      ? `Duration ${durationSeconds}s; 180° shutter; digital capture emulating 65 mm photochemical contrast; fine grain; subtle halation on speculars; no gate weave.`
+      : 'Duration unspecified; 180° shutter; digital capture emulating 65 mm photochemical contrast; fine grain; subtle halation on speculars; no gate weave.';
+  const shotListHeader =
+    shotCount > 0 && durationSeconds != null
+      ? `Optimized Shot List (${shotCount} shots / ${durationSeconds} s total)`
+      : shotCount > 0
+      ? `Optimized Shot List (${shotCount} shots / duration unspecified)`
+      : 'Optimized Shot List (shots and duration unspecified)';
+  const base = [
+    'Format & Look',
+    formatAndLookLine,
     '',
-    'Shot:',
-    'Hero product shot, shallow depth of field, pleasing bokeh, balanced framing.',
+    'Lenses & Filtration',
+    '32 mm / 50 mm spherical primes; Black Pro-Mist 1/4; slight CPL rotation to manage glass reflections on train windows.',
     '',
-    'Subject anchors:',
-    'Preserve the product from the input reference; keep logo and materials crisp and legible.',
+    'Grade / Palette',
+    'Highlights: clean morning sunlight with amber lift.',
+    'Mids: balanced neutrals with slight teal cast in shadows.',
+    'Blacks: soft, neutral with mild lift for haze retention.',
     '',
-    'Action:',
-    cleaned,
+    'Lighting & Atmosphere',
+    'Natural sunlight from camera left, low angle (07:30 AM).',
+    'Bounce: 4×4 ultrabounce silver from trackside.',
+    'Negative fill from opposite wall.',
+    'Practical: sodium platform lights on dim fade.',
+    'Atmos: gentle mist; train exhaust drift through light beam.',
     '',
-    'Lighting & Palette:',
-    'Soft key light from camera left, warm fill, subtle rim light. Palette anchors: warm amber, cream, charcoal, brand accent.',
+    'Location & Framing',
+    'Urban commuter platform, dawn.',
+    'Foreground: yellow safety line, coffee cup on bench.',
+    'Midground: waiting passengers silhouetted in haze.',
+    'Background: arriving train braking to a stop.',
+    'Avoid signage or corporate branding.',
     '',
-    'Camera Motion:',
-    'Slow push-in with a barely perceptible lateral drift.',
+    'Wardrobe / Props / Extras',
+    'Main subject: mid-30s traveler, navy coat, backpack slung on one shoulder, holding phone loosely at side.',
+    'Extras: commuters in muted tones; one cyclist pushing bike.',
+    'Props: paper coffee cup, rolling luggage, LED departure board (generic destinations).',
     '',
-    'Continuity:',
-    'Use the input reference as the first frame. Preserve subject identity, materials, and branding.'
-  ].join('\n');
+    'Sound',
+    'Diegetic only: faint rail screech, train brakes hiss, distant announcement muffled (-20 LUFS), low ambient hum.',
+    'Footsteps and paper rustle; no score or added foley.',
+    '',
+    shotListHeader,
+    cleaned || '',
+    '',
+    'Camera Notes (Why It Reads)',
+    'Keep eyeline low and close to lens axis for intimacy.',
+    'Allow micro flares from train glass as aesthetic texture.',
+    'Preserve subtle handheld imperfection for realism.',
+    'Do not break silhouette clarity with overexposed flare; retain skin highlight roll-off.',
+    '',
+    'Finishing',
+    'Fine-grain overlay with mild chroma noise for realism; restrained halation on practicals; warm-cool LUT for morning split tone.',
+    'Mix: prioritize train and ambient detail over footstep transients.',
+    'Poster frame: traveler mid-turn, golden rim light, arriving train soft-focus in background haze.'
+  ];
+
+  return base.join('\n');
 }
 
 function extractOutputText(data) {
@@ -144,7 +189,6 @@ app.post('/api/generate-video-script', async (req, res) => {
     const scriptPrompt = buildScriptPrompt(prompt, seconds);
     console.log('[script] request payload', {
       model: 'gpt-4o-mini',
-      max_output_tokens: 220,
       input: { textLength: scriptPrompt.length, hasImage: Boolean(image) }
     });
 
@@ -168,8 +212,7 @@ app.post('/api/generate-video-script', async (req, res) => {
               ...(image ? [{ type: 'input_image', image_url: image }] : [])
             ]
           }
-        ],
-        max_output_tokens: 220
+        ]
       })
     });
 
@@ -373,24 +416,19 @@ app.post('/api/generate-video', async (req, res) => {
 
   try {
     const resized = await sharp(parsed.buffer)
-      .resize(1280, 720, { fit: 'cover' })
+      .resize(720, 1280, { fit: 'cover' })
       .toFormat('jpeg')
       .toBuffer();
 
     const form = new FormData();
     form.append('model', 'sora-2-pro');
     form.append('prompt', buildVideoPrompt(prompt));
-    form.append('size', '1280x720');
+    form.append('size', '720x1280');
     form.append('seconds', String(seconds));
     form.append('input_reference', new Blob([resized], { type: 'image/jpeg' }), 'reference.jpg');
 
-    console.log('[video] request payload', {
-      model: 'sora-2-pro',
-      size: '1280x720',
-      seconds,
-      promptLength: String(prompt).length,
-      hasInputReference: true
-    });
+    console.log('[video] request payload form', form);
+
 
     const response = await fetch('https://api.openai.com/v1/videos', {
       method: 'POST',
