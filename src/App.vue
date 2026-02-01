@@ -1,203 +1,186 @@
 <template>
-  <div class="app">
-    <header class="hero">
+  <div class="page">
+    <header class="top">
       <div>
-        <p class="eyebrow">Campaign Studio</p>
-        <h1>Compose bold creatives in minutes.</h1>
-        <p class="subhead">
-          Drop in the product, add a scene, and let the creative engine place it with style. Iterate on
-          angle, scale, and position without leaving the flow.
+        <p class="eyebrow">Creative Studio</p>
+        <h1>Compose standout product visuals.</h1>
+        <p class="lede">
+          A minimal flow for marketing teams: upload a product, set the scene, and generate image + video
+          in one place.
         </p>
       </div>
-      <div class="hero-card">
-        <div class="stat">
-          <span>01</span>
-          <p>Upload the subject</p>
-        </div>
-        <div class="stat">
-          <span>02</span>
-          <p>Pick the backdrop</p>
-        </div>
-        <div class="stat">
-          <span>03</span>
-          <p>Generate image + video</p>
-        </div>
+      <div class="actions">
+        <button class="pill" @click="mode = 'creative'" :class="{ active: mode === 'creative' }">
+          Generate creative
+        </button>
+        <button class="pill" @click="mode = 'video'" :class="{ active: mode === 'video' }">
+          Generate ad
+        </button>
       </div>
     </header>
 
-    <section class="panel">
-      <div class="grid">
-        <div class="column">
-          <h2>Inputs</h2>
-          <p class="muted">Keep the subject crisp and the scene wide for the best blend.</p>
-
-          <div class="card" style="--delay: 1">
-            <h3>1. Subject image</h3>
-            <p class="muted">PNG or JPG. Clear background preferred.</p>
-            <label class="upload" :class="{ filled: objectPreview }">
+    <section class="stage">
+      <div class="panel">
+        <div v-if="mode === 'creative'" class="stack">
+          <div class="drop-grid">
+            <label class="drop" :class="{ filled: objectPreview }">
               <input type="file" accept="image/*" @change="onObjectImage" />
-              <div v-if="!objectPreview">
-                <strong>Upload subject</strong>
-                <span>Drag and drop or browse</span>
+              <div v-if="!objectPreview" class="drop-empty">
+                <strong>Drop in your product image</strong>
+                <span>PNG or JPG · best with clean background</span>
               </div>
-              <div v-else class="preview">
-                <img :src="objectPreview" alt="Subject preview" />
+              <div v-else class="drop-preview">
+                <img :src="objectPreview" alt="Product preview" />
                 <button type="button" class="ghost" @click="clearObject">Replace</button>
               </div>
             </label>
-            <p v-if="objectError" class="error">{{ objectError }}</p>
-          </div>
 
-          <div class="card" style="--delay: 2">
-            <h3>2. Scene image</h3>
-            <p class="muted">The environment where the subject will live.</p>
-            <label class="upload" :class="{ filled: scenePreview }">
+            <label class="drop" :class="{ filled: scenePreview }">
               <input type="file" accept="image/*" @change="onSceneImage" />
-              <div v-if="!scenePreview">
-                <strong>Upload scene</strong>
-                <span>Wide shots work best</span>
+              <div v-if="!scenePreview" class="drop-empty">
+                <strong>Add a scene image (optional)</strong>
+                <span>Wide shot works best</span>
               </div>
-              <div v-else class="preview">
+              <div v-else class="drop-preview">
                 <img :src="scenePreview" alt="Scene preview" />
                 <button type="button" class="ghost" @click="clearScene">Replace</button>
               </div>
             </label>
-            <p v-if="sceneError" class="error">{{ sceneError }}</p>
           </div>
 
-          <div class="card" style="--delay: 3">
-            <h3>3. Creative guidance</h3>
-            <label class="field">
-              <span>Prompt</span>
-              <textarea
-                v-model="prompt"
-                placeholder="E.g. Place the bottle on the marble counter with soft morning light"
-              ></textarea>
-            </label>
-            <div class="controls">
-              <label class="field">
-                <span>Position</span>
-                <select v-model="position">
-                  <option value="center">Center</option>
-                  <option value="left">Left third</option>
-                  <option value="right">Right third</option>
-                  <option value="foreground">Foreground</option>
-                  <option value="background">Background</option>
-                </select>
-              </label>
-              <label class="field">
-                <span>Scale</span>
-                <input type="range" min="30" max="120" v-model="scale" />
-                <small>{{ scale }}%</small>
-              </label>
-              <label class="field">
-                <span>View</span>
-                <select v-model="view">
-                  <option value="hero">Hero shot</option>
-                  <option value="top">Top-down</option>
-                  <option value="angled">Angled 3/4</option>
-                  <option value="close">Close-up</option>
-                </select>
-              </label>
-            </div>
-            <label class="field">
-              <span>Brand mood</span>
-              <input
-                v-model="mood"
-                type="text"
-                placeholder="Warm, premium, minimalist, playful"
-              />
-            </label>
-          </div>
+          <label class="field">
+            <span>Prompt for creative</span>
+            <textarea
+              v-model="prompt"
+              placeholder="Place the product on a terrazzo counter with warm daylight"
+            ></textarea>
+          </label>
 
-          <div class="actions">
-            <button
-              type="button"
-              class="primary"
-              :disabled="!canGenerate || imageLoading"
-              @click="generateImage"
-            >
-              <span v-if="!imageLoading">Generate Creative</span>
+          <div class="row">
+            <button class="primary" :disabled="!canGenerate || imageLoading" @click="generateImage">
+              <span v-if="!imageLoading">Generate creative</span>
               <span v-else>Composing…</span>
             </button>
-            <button type="button" class="ghost" @click="resetAll" :disabled="imageLoading">
-              Reset
-            </button>
-            <p v-if="imageError" class="error">{{ imageError }}</p>
+            <button class="ghost" @click="resetAll" :disabled="imageLoading">Reset</button>
           </div>
+          <p v-if="imageError" class="error">{{ imageError }}</p>
         </div>
 
-        <div class="column">
-          <h2>Output</h2>
-          <p class="muted">Review and iterate without re-uploading.</p>
-
-          <div class="card output" style="--delay: 1">
-            <div v-if="!generatedImage && !imageLoading" class="empty">
-              <p>No creative generated yet.</p>
-              <span>Once ready, it appears here.</span>
+        <div v-else class="stack">
+          <div class="drop single" :class="{ filled: videoInputPreview }">
+            <div v-if="!videoInputPreview" class="drop-empty">
+              <strong>Use generated image or upload one</strong>
+              <span>We will use this as the first frame</span>
+              <label class="tiny">
+                <input type="file" accept="image/*" @change="onVideoInputImage" />
+                <span>Upload image</span>
+              </label>
+              <button
+                v-if="generatedImage"
+                type="button"
+                class="ghost"
+                @click="useGeneratedForVideo"
+              >
+                Use generated
+              </button>
             </div>
-            <div v-if="imageLoading" class="loading">
-              <div class="spinner"></div>
-              <p>Blending your subject into the scene…</p>
-            </div>
-            <div v-if="generatedImage" class="result">
-              <img :src="generatedImage" alt="Generated creative" />
-              <div class="result-actions">
-                <button type="button" class="primary" @click="downloadImage">Download image</button>
-                <button type="button" class="ghost" @click="clearGenerated">Clear</button>
+            <div v-else class="drop-preview">
+              <img :src="videoInputPreview" alt="Video input preview" />
+              <div class="inline-actions">
+                <button type="button" class="ghost" @click="clearVideoInput">Replace</button>
+                <button
+                  v-if="generatedImage"
+                  type="button"
+                  class="ghost"
+                  @click="useGeneratedForVideo"
+                >
+                  Use generated
+                </button>
               </div>
             </div>
           </div>
 
-          <div class="card video" style="--delay: 2">
-            <h3>Generate creative video</h3>
-            <p class="muted">
-              Uses the generated image as the starting frame and a short prompt to animate. Requires a
-              completed image.
-            </p>
-            <label class="field">
-              <span>Video prompt</span>
-              <textarea
-                v-model="videoPrompt"
-                placeholder="Add gentle camera push-in, floating sparkles"
-              ></textarea>
-            </label>
-            <label class="field">
-              <span>Video duration</span>
-              <select v-model="videoDuration">
-                <option value="4">4 seconds (snappiest)</option>
-                <option value="8">8 seconds</option>
-                <option value="12">12 seconds (longest)</option>
-              </select>
-            </label>
+          <label class="field">
+            <span>Ad brief</span>
+            <textarea
+              v-model="videoPrompt"
+              placeholder="Couple sits on the sofa, cozy weekend feel, Instagram style"
+            ></textarea>
+          </label>
+
+          <label class="field">
+            <span>Video duration</span>
+            <select v-model="videoDuration">
+              <option value="4">4 seconds</option>
+              <option value="8">8 seconds</option>
+              <option value="12">12 seconds</option>
+            </select>
+          </label>
+
+          <div class="row">
             <button
-              type="button"
               class="primary"
+              :disabled="!canGenerateScript || scriptLoading"
+              @click="generateVideoScript"
+            >
+              <span v-if="!scriptLoading">Generate script</span>
+              <span v-else>Writing…</span>
+            </button>
+            <button
+              class="ghost"
               :disabled="!canGenerateVideo || videoLoading"
               @click="generateVideo"
             >
-              <span v-if="!videoLoading">Generate Creative Video</span>
+              <span v-if="!videoLoading">Generate ad</span>
               <span v-else>Animating…</span>
             </button>
-            <p v-if="videoError" class="error">{{ videoError }}</p>
+            <button class="ghost" @click="clearGenerated" :disabled="videoLoading">Clear</button>
+          </div>
+          <p v-if="videoError" class="error">{{ videoError }}</p>
+          <div v-if="videoStatus" class="status">{{ videoStatus }}</div>
+        </div>
+      </div>
 
-            <div v-if="videoStatus" class="status">
-              <span>{{ videoStatus }}</span>
-            </div>
-
-            <div v-if="videoUrl" class="video-preview">
-              <video controls :src="videoUrl"></video>
-              <button type="button" class="ghost" @click="downloadVideo">Download video</button>
+      <div class="preview">
+        <div v-if="mode === 'creative'" class="preview-card">
+          <div v-if="!generatedImage && !imageLoading" class="empty">Your creative appears here.</div>
+          <div v-if="imageLoading" class="loading">
+            <div class="spinner"></div>
+            <p>Blending subject with scene…</p>
+          </div>
+          <div v-if="generatedImage" class="result">
+            <img :src="generatedImage" alt="Generated creative" />
+            <div class="row">
+              <button class="primary" @click="downloadImage">Download</button>
+              <button class="ghost" @click="clearGenerated">Clear</button>
+              <button class="ghost" @click="mode = 'video'">Generate ad</button>
             </div>
           </div>
+        </div>
 
-          <div class="card tips" style="--delay: 3">
-            <h3>Creative safety checks</h3>
-            <ul>
-              <li>Ensure you have usage rights for both images.</li>
-              <li>Avoid sensitive or trademarked elements without permission.</li>
-              <li>If the subject is cropped oddly, try a larger scale or different view.</li>
-            </ul>
+        <div v-else class="preview-card">
+          <div v-if="!videoSubmitted" class="script-panel">
+            <p class="script-title">Generated script (editable)</p>
+            <textarea
+              v-model="videoScript"
+              class="script-textarea"
+              placeholder="Generate a script to preview here"
+            ></textarea>
+            <div class="script-meta">Review and edit before generating the ad.</div>
+          </div>
+          <div v-else>
+            <div v-if="!videoUrl && !videoLoading" class="empty">Your ad video will appear here.</div>
+            <div v-if="videoLoading" class="loading">
+              <div class="spinner"></div>
+              <p>Rendering your ad…</p>
+            </div>
+            <div v-if="videoUrl" class="result">
+              <video controls :src="videoUrl"></video>
+              <div class="row">
+                <button class="primary" @click="downloadVideo">Download</button>
+                <button class="ghost" @click="clearVideoOutput">Clear</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -207,6 +190,8 @@
 
 <script setup>
 import { computed, onBeforeUnmount, ref } from 'vue';
+
+const mode = ref('creative');
 
 const objectFile = ref(null);
 const sceneFile = ref(null);
@@ -218,26 +203,30 @@ const imageError = ref('');
 const videoError = ref('');
 const imageLoading = ref(false);
 const videoLoading = ref(false);
+const scriptLoading = ref(false);
 const generatedImage = ref('');
 const videoUrl = ref('');
 const videoStatus = ref('');
 const videoId = ref('');
+const videoSubmitted = ref(false);
 
 const prompt = ref('');
-const mood = ref('');
-const position = ref('center');
-const scale = ref(70);
-const view = ref('hero');
 const videoPrompt = ref('');
+const videoScript = ref('');
 const videoDuration = ref('4');
+const videoInputFile = ref(null);
+const videoInputPreview = ref('');
 
 let pollTimer = null;
 
 const maxFileSize = 12 * 1024 * 1024;
 
-const canGenerate = computed(() => objectFile.value && sceneFile.value);
+const canGenerate = computed(() => objectFile.value);
+const canGenerateScript = computed(
+  () => videoInputPreview.value && videoPrompt.value.trim() && videoDuration.value
+);
 const canGenerateVideo = computed(
-  () => generatedImage.value && videoPrompt.value.trim() && videoDuration.value
+  () => videoInputPreview.value && videoScript.value.trim() && videoDuration.value
 );
 
 function validateImage(file) {
@@ -277,6 +266,24 @@ function onSceneImage(event) {
   toPreview(file, (val) => (scenePreview.value = val));
 }
 
+function onVideoInputImage(event) {
+  const file = event.target.files?.[0];
+  videoError.value = validateImage(file);
+  if (videoError.value) {
+    videoInputFile.value = null;
+    videoInputPreview.value = '';
+    return;
+  }
+  videoInputFile.value = file;
+  toPreview(file, (val) => (videoInputPreview.value = val));
+}
+
+function useGeneratedForVideo() {
+  if (!generatedImage.value) return;
+  videoInputPreview.value = generatedImage.value;
+  videoInputFile.value = null;
+}
+
 function clearObject() {
   objectFile.value = null;
   objectPreview.value = '';
@@ -292,6 +299,22 @@ function clearGenerated() {
   videoUrl.value = '';
   videoStatus.value = '';
   videoId.value = '';
+  videoScript.value = '';
+  videoSubmitted.value = false;
+  if (pollTimer) clearInterval(pollTimer);
+}
+
+function clearVideoInput() {
+  videoInputPreview.value = '';
+  videoInputFile.value = null;
+  videoScript.value = '';
+}
+
+function clearVideoOutput() {
+  videoUrl.value = '';
+  videoStatus.value = '';
+  videoId.value = '';
+  videoSubmitted.value = false;
   if (pollTimer) clearInterval(pollTimer);
 }
 
@@ -299,32 +322,23 @@ function resetAll() {
   clearObject();
   clearScene();
   clearGenerated();
+  clearVideoInput();
   prompt.value = '';
-  mood.value = '';
-  position.value = 'center';
-  scale.value = 70;
-  view.value = 'hero';
   videoPrompt.value = '';
+  videoScript.value = '';
   videoDuration.value = '4';
+  videoSubmitted.value = false;
   objectError.value = '';
   sceneError.value = '';
   imageError.value = '';
   videoError.value = '';
 }
 
-function buildPrompt() {
-  const parts = [prompt.value.trim()].filter(Boolean);
-  parts.push(`Position the subject: ${position.value}.`);
-  parts.push(`Scale: ${scale.value}%. View: ${view.value}.`);
-  if (mood.value.trim()) parts.push(`Mood: ${mood.value.trim()}.`);
-  return parts.join(' ');
-}
-
 async function generateImage() {
   imageError.value = '';
   videoError.value = '';
   if (!canGenerate.value) {
-    imageError.value = 'Please add both images before generating.';
+    imageError.value = 'Please add a product image before generating.';
     return;
   }
 
@@ -337,8 +351,8 @@ async function generateImage() {
   try {
     const payload = new FormData();
     payload.append('objectImage', objectFile.value);
-    payload.append('sceneImage', sceneFile.value);
-    payload.append('prompt', buildPrompt());
+    if (sceneFile.value) payload.append('sceneImage', sceneFile.value);
+    payload.append('prompt', prompt.value.trim());
 
     const response = await fetch('/api/generate-image', {
       method: 'POST',
@@ -352,6 +366,7 @@ async function generateImage() {
 
     const data = await response.json();
     generatedImage.value = `data:${data.mime};base64,${data.base64}`;
+    useGeneratedForVideo();
   } catch (error) {
     imageError.value = error.message || 'Something went wrong.';
   } finally {
@@ -361,16 +376,17 @@ async function generateImage() {
 
 async function generateVideo() {
   videoError.value = '';
-  if (!generatedImage.value) {
-    videoError.value = 'Generate an image first.';
+  if (!videoInputPreview.value) {
+    videoError.value = 'Select a starting image.';
     return;
   }
-  if (!videoPrompt.value.trim()) {
-    videoError.value = 'Add a short video prompt.';
+  if (!videoScript.value.trim()) {
+    videoError.value = 'Generate or edit a script first.';
     return;
   }
 
   videoLoading.value = true;
+  videoSubmitted.value = true;
   videoStatus.value = 'Submitting to Sora…';
   videoUrl.value = '';
 
@@ -379,8 +395,8 @@ async function generateVideo() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        prompt: videoPrompt.value.trim(),
-        image: generatedImage.value,
+        prompt: videoScript.value.trim(),
+        image: videoInputPreview.value,
         seconds: Number(videoDuration.value)
       })
     });
@@ -398,6 +414,44 @@ async function generateVideo() {
     videoStatus.value = '';
   } finally {
     videoLoading.value = false;
+  }
+}
+
+async function generateVideoScript() {
+  videoError.value = '';
+  videoSubmitted.value = false;
+  if (!videoInputPreview.value) {
+    videoError.value = 'Select a starting image.';
+    return;
+  }
+  if (!videoPrompt.value.trim()) {
+    videoError.value = 'Add a brief before generating a script.';
+    return;
+  }
+
+  scriptLoading.value = true;
+  try {
+    const response = await fetch('/api/generate-video-script', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: videoPrompt.value.trim(),
+        seconds: Number(videoDuration.value),
+        image: videoInputPreview.value
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || 'Failed to generate script.');
+    }
+
+    const data = await response.json();
+    videoScript.value = data.script || '';
+  } catch (error) {
+    videoError.value = error.message || 'Something went wrong.';
+  } finally {
+    scriptLoading.value = false;
   }
 }
 
@@ -450,191 +504,215 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.app {
-  padding: 40px 6vw 80px;
+.page {
+  min-height: 100vh;
+  padding: 36px 5vw 48px;
+  background: radial-gradient(circle at top left, #fff6e1 0%, #f5f0ea 40%, #e7f4f2 100%);
 }
 
-.hero {
+.top {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 32px;
-  margin-bottom: 48px;
+  gap: 24px;
+  align-items: end;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  margin-bottom: 28px;
 }
 
 .eyebrow {
   text-transform: uppercase;
-  letter-spacing: 0.18em;
-  font-size: 12px;
-  color: var(--sea);
+  letter-spacing: 0.28em;
+  font-size: 11px;
+  color: #157066;
   margin: 0 0 12px;
 }
 
-.subhead {
-  color: var(--ink-soft);
-  max-width: 520px;
-  font-size: 16px;
+h1 {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(2.2rem, 3vw, 3.2rem);
+  margin: 0;
+}
+
+.lede {
+  max-width: 540px;
+  color: #4a5866;
+  font-size: 15px;
   line-height: 1.6;
 }
 
-.hero-card {
-  background: linear-gradient(140deg, #fff, #f6fffb);
-  padding: 24px;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow);
-  display: grid;
-  gap: 16px;
-  animation: fadeUp 0.8s ease both;
-  animation-delay: 120ms;
-}
-
-.stat {
+.actions {
   display: flex;
   gap: 12px;
-  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
-.stat span {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--sea);
-  color: white;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
+.pill {
+  border: 1px solid rgba(21, 112, 102, 0.2);
+  background: #fff;
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pill.active {
+  background: #157066;
+  color: #fff;
+  border-color: #157066;
+  box-shadow: 0 10px 24px rgba(21, 112, 102, 0.25);
+}
+
+.stage {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 28px;
 }
 
 .panel {
-  background: var(--mist);
-  border-radius: var(--radius-lg);
-  padding: 32px;
-  box-shadow: var(--shadow);
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 28px;
+  padding: 22px;
+  box-shadow: 0 30px 80px rgba(26, 33, 44, 0.12);
+  align-self: start;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 32px;
-}
-
-.column {
+.stack {
   display: grid;
   gap: 20px;
 }
 
-.card {
-  background: var(--card);
-  padding: 20px;
-  border-radius: var(--radius-md);
-  box-shadow: 0 8px 30px rgba(31, 36, 48, 0.08);
+.drop-grid {
   display: grid;
-  gap: 12px;
-  animation: fadeUp 0.7s ease both;
-  animation-delay: calc(var(--delay, 0) * 120ms);
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
-.muted {
-  color: var(--ink-soft);
-  margin: 0;
-  font-size: 14px;
-}
-
-.upload {
-  border: 1px dashed #cfd6e1;
-  border-radius: var(--radius-sm);
-  padding: 18px;
-  text-align: center;
+.drop {
+  border: 1.5px dashed #cdd7dc;
+  border-radius: 18px;
+  padding: 14px;
+  min-height: 140px;
+  display: grid;
+  place-items: center;
   cursor: pointer;
+  background: #fbfbfb;
   transition: all 0.2s ease;
-  display: grid;
-  gap: 8px;
 }
 
-.upload:hover {
-  border-color: var(--sea);
-  box-shadow: var(--ring);
-}
-
-.upload input {
-  display: none;
-}
-
-.upload.filled {
+.drop.filled {
   padding: 12px;
 }
 
-.preview img {
-  border-radius: 14px;
-  max-height: 180px;
-  object-fit: cover;
-  margin: 0 auto;
+.drop:hover {
+  border-color: #157066;
+  box-shadow: 0 0 0 3px rgba(21, 112, 102, 0.15);
 }
 
-.controls {
+.drop input {
+  display: none;
+}
+
+.drop-empty {
+  text-align: center;
   display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 6px;
+  color: #4a5866;
+  font-size: 13px;
+}
+
+.drop-preview {
+  display: grid;
+  gap: 10px;
+  place-items: center;
+}
+
+.drop-preview img {
+  border-radius: 16px;
+  max-height: 140px;
+  object-fit: cover;
+}
+
+.drop.single {
+  min-height: 160px;
+}
+
+.inline-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.tiny {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  border: 1px solid #d7e0e6;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.tiny input {
+  display: none;
 }
 
 .field {
   display: grid;
-  gap: 6px;
+  gap: 8px;
   font-size: 13px;
-  color: var(--ink-soft);
+  color: #4a5866;
 }
 
-input[type="text"],
 textarea,
 select {
-  border: 1px solid #d7dde6;
-  border-radius: 12px;
+  border: 1px solid #d7e0e6;
+  border-radius: 14px;
   padding: 10px 12px;
   font-size: 14px;
-  color: var(--ink);
+  background: #fff;
 }
 
 textarea {
-  min-height: 90px;
+  min-height: 72px;
   resize: vertical;
 }
 
-input:focus,
 textarea:focus,
 select:focus {
   outline: none;
-  box-shadow: var(--ring);
-  border-color: var(--sea);
+  border-color: #157066;
+  box-shadow: 0 0 0 3px rgba(21, 112, 102, 0.2);
 }
 
-.actions {
-  display: grid;
-  gap: 10px;
+.row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .primary {
   border: none;
   border-radius: 999px;
-  padding: 12px 20px;
-  background: linear-gradient(120deg, var(--sea), #16877a);
-  color: white;
+  padding: 10px 18px;
+  background: linear-gradient(120deg, #157066, #1e8e80);
+  color: #fff;
   font-weight: 600;
   cursor: pointer;
   transition: transform 0.2s ease;
 }
 
 .primary:disabled {
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: not-allowed;
   transform: none;
 }
 
-.primary:hover:not(:disabled) {
-  transform: translateY(-1px) scale(1.01);
-}
-
 .ghost {
-  border: 1px solid #d1d8e2;
+  border: 1px solid #d7e0e6;
   border-radius: 999px;
   padding: 10px 16px;
   background: transparent;
@@ -642,62 +720,89 @@ select:focus {
 }
 
 .error {
-  color: var(--error);
-  font-size: 13px;
+  color: #b42318;
   margin: 0;
+  font-size: 13px;
 }
 
-.output {
+.status {
+  background: #f1f4f7;
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #556270;
+}
+
+.preview {
+  display: grid;
+}
+
+.preview-card {
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 28px;
+  padding: 22px;
   min-height: 320px;
-  place-items: center;
+  height: 320px;
+  box-shadow: 0 30px 80px rgba(26, 33, 44, 0.12);
+  display: grid;
+  align-items: center;
 }
 
 .empty {
-  text-align: center;
-  color: var(--ink-soft);
+  color: #4a5866;
+  font-size: 14px;
 }
 
 .loading {
   display: grid;
   gap: 12px;
   place-items: center;
+  color: #4a5866;
 }
 
 .spinner {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  border: 4px solid #dbe2ec;
-  border-top-color: var(--sun);
+  border: 4px solid #d7e0e6;
+  border-top-color: #f08b5b;
   animation: spin 1s linear infinite;
 }
 
-.result-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  margin-top: 12px;
+.result {
+  display: grid;
+  gap: 16px;
+  justify-items: center;
 }
 
-.video-preview video {
+.result img,
+.result video {
+  border-radius: 20px;
+  max-height: 240px;
   width: 100%;
-  border-radius: 16px;
+  object-fit: contain;
 }
 
-.status {
-  background: #f2f5f9;
-  padding: 10px 12px;
-  border-radius: 12px;
-  font-size: 13px;
-  color: var(--ink-soft);
+.script-panel {
+  width: 100%;
+  display: grid;
+  gap: 12px;
+  height: 100%;
 }
 
-.tips ul {
+.script-title {
   margin: 0;
-  padding-left: 16px;
-  color: var(--ink-soft);
-  font-size: 13px;
-  line-height: 1.6;
+  font-weight: 600;
+  color: #2f3c4a;
+}
+
+.script-textarea {
+  min-height: 200px;
+}
+
+.script-meta {
+  font-size: 12px;
+  color: #6b7785;
 }
 
 @keyframes spin {
@@ -706,23 +811,13 @@ select:focus {
   }
 }
 
-@keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@media (max-width: 720px) {
-  .app {
-    padding: 24px 5vw 60px;
+@media (max-width: 860px) {
+  .actions {
+    justify-content: flex-start;
   }
 
-  .panel {
+  .panel,
+  .preview-card {
     padding: 20px;
   }
 }
