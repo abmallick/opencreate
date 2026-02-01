@@ -46,6 +46,13 @@ function buildImagePrompt(userPrompt) {
   return `${base} ${userPrompt}`;
 }
 
+function buildRegeneratePrompt(userPrompt) {
+  const base =
+    'Refine and improve this image based on the prompt. Only make the changes specified in the prompt and keep the image as close as possible to the original.';
+  if (!userPrompt) return base;
+  return `${base} ${userPrompt}`;
+}
+
 function buildVideoPrompt(userPrompt) {
   const cleaned = userPrompt?.trim();
   const marketingBrief =
@@ -208,10 +215,14 @@ app.post(
       return;
     }
 
-    const prompt = buildImagePrompt(req.body.prompt?.trim());
+    const regenerate = req.body.regenerate === 'true';
+    const prompt = regenerate
+      ? buildRegeneratePrompt(req.body.prompt?.trim())
+      : buildImagePrompt(req.body.prompt?.trim());
     console.log('[images] request start', {
       object: objectImage.originalname,
       scene: sceneImage.originalname,
+      regenerate,
       promptLength: prompt.length
     });
 

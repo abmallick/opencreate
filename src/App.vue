@@ -154,8 +154,17 @@
           </div>
           <div v-if="generatedImage" class="result">
             <img :src="generatedImage" alt="Generated creative" />
+            <label class="field preview-field">
+              <span>Edit prompt</span>
+              <textarea v-model="previewPrompt" placeholder="Refine your prompt..."></textarea>
+            </label>
             <div class="row">
-              <button class="primary" @click="downloadImage">Download</button>
+              <button class="primary" :disabled="!canRegenerate || imageLoading" @click="regenerateImage">
+                <span v-if="!imageLoading">Regenerate</span>
+                <span v-else>Composing…</span>
+              </button>
+              <button class="ghost" @click="downloadImage">Download</button>
+              <button class="ghost" @click="clearGenerated">Clear</button>
               <button class="ghost" @click="mode = 'video'">Generate ad</button>
             </div>
           </div>
@@ -216,6 +225,7 @@ const videoId = ref('');
 const videoSubmitted = ref(false);
 
 const prompt = ref('');
+const previewPrompt = ref('');
 const videoPrompt = ref('');
 const videoScript = ref('');
 const videoDuration = ref('4');
@@ -228,6 +238,7 @@ let pollTimer = null;
 const maxFileSize = 12 * 1024 * 1024;
 
 const canGenerate = computed(() => objectFile.value);
+const canRegenerate = computed(() => objectFile.value && previewPrompt.value.trim());
 const canGenerateScript = computed(
   () => videoInputPreview.value && videoPrompt.value.trim() && videoDuration.value
 );
@@ -324,6 +335,7 @@ function clearScene() {
 
 function clearGenerated() {
   generatedImage.value = '';
+  previewPrompt.value = '';
   videoUrl.value = '';
   videoStatus.value = '';
   videoId.value = '';
@@ -354,6 +366,7 @@ function resetAll() {
   clearGenerated();
   clearVideoInput();
   prompt.value = '';
+  previewPrompt.value = '';
   videoPrompt.value = '';
   videoScript.value = '';
   videoDuration.value = '4';
@@ -365,7 +378,7 @@ function resetAll() {
   videoError.value = '';
 }
 
-async function generateImage() {
+async function doGenerateImage(promptText, regenerate = false) {
   imageError.value = '';
   videoError.value = '';
   if (!canGenerate.value) {
@@ -383,7 +396,8 @@ async function generateImage() {
     const payload = new FormData();
     payload.append('objectImage', objectFile.value);
     if (sceneFile.value) payload.append('sceneImage', sceneFile.value);
-    payload.append('prompt', prompt.value.trim());
+    payload.append('prompt', promptText);
+    payload.append('regenerate', regenerate ? 'true' : 'false');
 
     const response = await fetch('/api/generate-image', {
       method: 'POST',
@@ -397,12 +411,21 @@ async function generateImage() {
 
     const data = await response.json();
     generatedImage.value = `data:${data.mime};base64,${data.base64}`;
+    previewPrompt.value = promptText;
     useGeneratedForVideo();
   } catch (error) {
     imageError.value = error.message || 'Something went wrong.';
   } finally {
     imageLoading.value = false;
   }
+}
+
+function generateImage() {
+  doGenerateImage(prompt.value.trim(), false);
+}
+
+function regenerateImage() {
+  doGenerateImage(previewPrompt.value.trim(), true);
 }
 
 async function generateVideo() {
@@ -843,9 +866,17 @@ select:focus {
 .result img,
 .result video {
   border-radius: 20px;
-  max-height: 240px;
+  max-height: 180px;
   width: 100%;
   object-fit: contain;
+}
+
+.preview-field {
+  width: 100%;
+}
+
+.preview-field textarea {
+  min-height: 48px;
 }
 
 .script-panel {
