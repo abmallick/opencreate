@@ -1,32 +1,24 @@
 # Creative Composer
 
-A lightweight Vue app for marketing teams to blend a product into a scene and optionally spin up a short video.
+Creative Composer is a lightweight Vue app for marketing teams to blend a product into a scene. It can also generate a short video from the composed image.
 
-## Setup
-
-1. Install dependencies:
+## How to run
 
 ```bash
 npm install
-```
-
-2. Add your OpenAI API key:
-
-```bash
 cp .env.example .env
-```
-
-3. Run the app + API server:
-
-```bash
 npm run dev:full
 ```
 
 - Frontend: http://localhost:5173
 - API server: http://localhost:8787
 
-## Notes
+Live Deployment (try it out): http://13.233.36.252:5173/
 
-- The image generator uses the Images Edits API with two input images.
-- Video generation uses Sora with the generated image as the starting reference.
-- Ensure you have access to Sora on your OpenAI account.
+## Demo steps
+
+1. Open http://localhost:5173.
+2. Upload a product image and a background/scene image.
+3. Enter a short prompt describing how to blend the product into the scene.
+4. Click "Generate" to create the blended image.
+5. (Optional) Click "Generate Video" and enter a motion prompt to create a short clip.
