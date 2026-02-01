@@ -1,5 +1,27 @@
 <template>
-  <div class="page" :class="{ 'ad-mode': mode === 'video' }">
+  <div v-if="!isAuthenticated" class="auth-page">
+    <div class="auth-card">
+      <p class="eyebrow">Creative Studio</p>
+      <h1>Sign in to continue</h1>
+      <p class="auth-subtitle">Use your OpenCreate credentials to access the studio.</p>
+      <form class="auth-form" @submit.prevent="handleAuth">
+        <label class="field">
+          <span>Username</span>
+          <input v-model="authUsername" type="text" autocomplete="username" />
+        </label>
+        <label class="field">
+          <span>Password</span>
+          <input v-model="authPassword" type="password" autocomplete="current-password" />
+        </label>
+        <button class="primary" type="submit" :disabled="authLoading">
+          <span v-if="!authLoading">Enter studio</span>
+          <span v-else>Checking…</span>
+        </button>
+        <p v-if="authError" class="error">{{ authError }}</p>
+      </form>
+    </div>
+  </div>
+  <div v-else class="page" :class="{ 'ad-mode': mode === 'video' }">
     <header class="top">
       <div>
         <p class="eyebrow">Creative Studio</p>
@@ -308,9 +330,14 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 const mode = ref('creative');
+const isAuthenticated = ref(false);
+const authUsername = ref('');
+const authPassword = ref('');
+const authError = ref('');
+const authLoading = ref(false);
 
 const creativePresets = [
 {
@@ -434,6 +461,39 @@ function validateImage(file) {
   if (!file.type.startsWith('image/')) return 'Only image files are supported.';
   if (file.size > maxFileSize) return 'Image is too large (max 12MB).';
   return '';
+}
+
+async function handleAuth() {
+  authError.value = '';
+  if (!authUsername.value.trim() || !authPassword.value) {
+    authError.value = 'Enter both a username and password.';
+    return;
+  }
+
+  authLoading.value = true;
+
+  try {
+    const response = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: authUsername.value.trim(),
+        password: authPassword.value
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || 'Invalid credentials.');
+    }
+
+    isAuthenticated.value = true;
+    sessionStorage.setItem('opencreate-auth', 'true');
+  } catch (error) {
+    authError.value = error.message || 'Unable to authenticate.';
+  } finally {
+    authLoading.value = false;
+  }
 }
 
 function toPreview(file, setter) {
@@ -894,12 +954,63 @@ async function remixVideo() {
   }
 }
 
+onMounted(() => {
+  const storedAuth = sessionStorage.getItem('opencreate-auth');
+  isAuthenticated.value = storedAuth === 'true';
+});
+
 onBeforeUnmount(() => {
   if (pollTimer) clearInterval(pollTimer);
 });
 </script>
 
 <style scoped>
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 5vw;
+  background: radial-gradient(circle at top left, #fff6e1 0%, #f5f0ea 40%, #e7f4f2 100%);
+}
+
+.auth-card {
+  width: min(460px, 100%);
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 28px;
+  padding: 28px;
+  box-shadow: 0 30px 80px rgba(26, 33, 44, 0.16);
+  display: grid;
+  gap: 14px;
+}
+
+.auth-subtitle {
+  margin: 0 0 8px;
+  color: #4a5866;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.auth-form {
+  display: grid;
+  gap: 14px;
+}
+
+.auth-form input {
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid #d7dee4;
+  padding: 0 14px;
+  font-size: 14px;
+  background: #fff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.auth-form input:focus {
+  outline: none;
+  border-color: #157066;
+  box-shadow: 0 0 0 3px rgba(21, 112, 102, 0.15);
+}
+
 .page {
   min-height: 100vh;
   padding: 24px 5vw 40px;

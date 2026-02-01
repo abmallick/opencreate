@@ -64,6 +64,32 @@ app.use((req, res, next) => {
 });
 
 // ============================================================================
+// Authentication
+// ============================================================================
+app.post('/api/auth', (req, res) => {
+  const expectedUser = process.env.OPENCREATE_USER || process.env.opencreate_user;
+  const expectedPass = process.env.OPENCREATE_PASS || process.env.opencreate_pass;
+
+  if (!expectedUser || !expectedPass) {
+    res.status(500).json({ message: 'Missing OpenCreate auth env vars.' });
+    return;
+  }
+
+  const { username, password } = req.body || {};
+  if (!username || !password) {
+    res.status(400).json({ message: 'Username and password are required.' });
+    return;
+  }
+
+  if (username === expectedUser && password === expectedPass) {
+    res.json({ ok: true });
+    return;
+  }
+
+  res.status(401).json({ message: 'Invalid username or password.' });
+});
+
+// ============================================================================
 // Script Generation
 // ============================================================================
 app.post('/api/generate-video-script', async (req, res) => {
