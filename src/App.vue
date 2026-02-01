@@ -212,7 +212,7 @@
               {{ showScriptPanel ? 'Hide script' : 'View script' }}
             </button>
             <button
-              class="primary ad-cta"
+              class="primary"
               :disabled="!canGenerateVideo || videoLoading"
               @click="generateVideo"
             >
@@ -236,7 +236,7 @@
               <div class="cta-column">
                 <button class="ghost" @click="downloadImage">Download</button>
                 <button class="ghost" @click="clearGenerated">Clear</button>
-                <button class="primary ad-cta" @click="mode = 'video'">Generate ad</button>
+                <button class="primary" @click="mode = 'video'">Generate ad</button>
               </div>
               <div class="creative-media">
                 <div
@@ -1389,16 +1389,6 @@ select:focus {
   font-weight: 600;
   cursor: pointer;
   transition: transform 0.2s ease;
-}
-
-.ad-cta {
-  background: linear-gradient(120deg, #0f6a5e, #2aa889);
-  box-shadow: 0 16px 30px rgba(21, 112, 102, 0.24);
-  padding: 11px 22px;
-}
-
-.ad-cta:disabled {
-  box-shadow: none;
 }
 
 .primary:disabled {
