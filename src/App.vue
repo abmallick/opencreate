@@ -4,6 +4,7 @@
       <p class="eyebrow">Creative Studio</p>
       <h1>Sign in to continue</h1>
       <p class="auth-subtitle">Use your OpenCreate credentials to access the studio.</p>
+      <p class="auth-subtext">The test credentials are in the Google Form.</p>
       <form class="auth-form" @submit.prevent="handleAuth">
         <label class="field">
           <span>Username</span>
@@ -212,7 +213,7 @@
               {{ showScriptPanel ? 'Hide script' : 'View script' }}
             </button>
             <button
-              class="primary ad-cta"
+              class="primary"
               :disabled="!canGenerateVideo || videoLoading"
               @click="generateVideo"
             >
@@ -236,7 +237,7 @@
               <div class="cta-column">
                 <button class="ghost" @click="downloadImage">Download</button>
                 <button class="ghost" @click="clearGenerated">Clear</button>
-                <button class="primary ad-cta" @click="mode = 'video'">Generate ad</button>
+                <button class="primary" @click="mode = 'video'">Generate ad</button>
               </div>
               <div class="creative-media">
                 <div
@@ -288,13 +289,9 @@
               <div class="script-meta">Review and edit before generating the ad.</div>
             </div>
             <div v-else class="video-output">
-              <div v-if="videoLoading" class="ad-center">
+              <div v-if="videoPending" class="loading">
                 <div class="spinner"></div>
-                <p>Rendering your ad…</p>
-              </div>
-              <div v-else-if="videoStatus && !videoCompleted" class="ad-center">
-                <div class="spinner"></div>
-                <p>{{ videoStatusLabel }}</p>
+                <p>{{ videoPendingLabel }}</p>
               </div>
               <div v-else-if="videoUrl" class="result">
                 <video controls :src="videoUrl"></video>
@@ -430,6 +427,13 @@ const videoCompleted = computed(() => {
   const status = (videoStatus.value || '').toLowerCase().trim();
   return status.includes('completed');
 });
+const videoPending = computed(
+  () =>
+    videoSubmitted.value &&
+    !videoCompleted.value &&
+    !videoUrl.value &&
+    !videoError.value
+);
 const canRemix = computed(() =>
   videoId.value && videoCompleted.value && remixPrompt.value.trim() && !remixLoading.value
 );
@@ -450,6 +454,11 @@ const videoStatusLabel = computed(() => {
     failed: 'Failed'
   };
   return labels[normalized] || 'In Progress';
+});
+const videoPendingLabel = computed(() => {
+  if (videoStatusLabel.value) return videoStatusLabel.value;
+  if (videoLoading.value) return 'Submitting…';
+  return 'Rendering your ad…';
 });
 
 const imageTransform = computed(() => ({
@@ -990,6 +999,13 @@ onBeforeUnmount(() => {
   line-height: 1.6;
 }
 
+.auth-subtext {
+  margin: 0 0 4px;
+  color: #6b7785;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 .auth-form {
   display: grid;
   gap: 14px;
@@ -1391,16 +1407,6 @@ select:focus {
   transition: transform 0.2s ease;
 }
 
-.ad-cta {
-  background: linear-gradient(120deg, #0f6a5e, #2aa889);
-  box-shadow: 0 16px 30px rgba(21, 112, 102, 0.24);
-  padding: 11px 22px;
-}
-
-.ad-cta:disabled {
-  box-shadow: none;
-}
-
 .primary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -1527,15 +1533,6 @@ select:focus {
   gap: 12px;
   place-items: center;
   color: #4a5866;
-}
-
-.spinner {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 4px solid #d7e0e6;
-  border-top-color: #f08b5b;
-  animation: spin 1s linear infinite;
 }
 
 .result {
@@ -1708,12 +1705,6 @@ select:focus {
 .script-meta {
   font-size: 12px;
   color: #6b7785;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 @media (max-width: 860px) {
